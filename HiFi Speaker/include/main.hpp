@@ -8,13 +8,13 @@
 #define POTENTIOMETER_PIN 33
 
 #define GREEN_LED_PIN 32
-#define RED_LED_PIN 27
+#define RED_LED_PIN 14
 #define BLUE_LED_PIN 21
 
-#define UP_PIN 16
-#define DOWN_PIN 17
+#define UP_PIN 17
+#define DOWN_PIN 16
 
-#define RECEIVER_PIN 15
+#define INFRARED_RECEIVER_PIN 15
 
 #define POWER_PIN 13
 
@@ -31,6 +31,7 @@
 #define POWER_ON_WIFI_ACCESS_POINT_STATE 2 //green
 #define POWER_ON_WIFI_DISABLED 3 //yellow
 
+#define LED_FREQUENCY 60
 
 uint8_t State = 0;
 
@@ -39,7 +40,7 @@ uint8_t Current_Volume = 0;
 
 xTaskHandle Check_Infrared_Receiver_Handle;
 
-IRrecv Infrared_Receiver(RECEIVER_PIN);
+IRrecv Infrared_Receiver(INFRARED_RECEIVER_PIN);
 decode_results Received_Data;
 
 
