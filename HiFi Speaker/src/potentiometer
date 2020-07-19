@@ -1,0 +1,20 @@
+#define POTENTIOMETER_PIN 33
+
+uint16_t Current_Value;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(POTENTIOMETER_PIN, INPUT);
+  // put your setup code here, to run once:
+
+}
+
+void loop() {
+  Current_Value = analogRead(POTENTIOMETER_PIN);
+  Serial.print(Current_Value, DEC);
+  Serial.print(" | ");
+  Serial.println(map(Current_Value, 0, 4095, 0, 100), DEC);
+  delay(1000);
+  // put your main code here, to run repeatedly:
+
+}
