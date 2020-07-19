@@ -17,7 +17,7 @@
 #define VOLUME_UP_CODE 0xE0E0E01F
 #define A_CODE 0xE0E036C9
 
-#define RECEIVER_PIN 15
+
 
 IRrecv IR_Receiver(RECEIVER_PIN);
 
