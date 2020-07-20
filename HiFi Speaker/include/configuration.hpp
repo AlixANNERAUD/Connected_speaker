@@ -1,0 +1,40 @@
+#ifndef CONFIGURATION_HPP_INCLUDED
+#define CONFIGURATION_HPP_INCLUDED
+
+// Pinout
+#define POTENTIOMETER_PIN 33
+
+#define GREEN_LED_PIN 32
+#define RED_LED_PIN 14
+#define BLUE_LED_PIN 21
+
+#define UP_PIN 16
+#define DOWN_PIN 17
+
+#define INFRARED_RECEIVER_PIN 15
+
+#define POWER_PIN 13
+
+// IR Code
+#define MUTE_CODE 0xE0E0F00F
+#define VOLUME_DOWN_CODE 0xE0E0D02F
+#define VOLUME_UP_CODE 0xE0E0E01F
+#define A_CODE 0xE0E036C9
+
+
+// Volume
+
+#define VOLUME_STEP 32
+//
+
+
+//Color State
+
+#define POWER_OFF_COLOR 0x000000 // Black
+#define POWER_ON_WIFI_STATION 0x0000FF // Blue
+#define POWER_ON_WIFI_ACCESS_POINTER 0x00FF00 // Green
+#define POWER_ON_WIFI_DISABLED 0xFF00FF //Yellow
+
+#define LED_FREQUENCY 60
+
+#endif

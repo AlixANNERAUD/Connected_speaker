@@ -37,8 +37,9 @@ void Start()
 {
     Serial.println(F("Start"));
     State = 1;
-    Defined_Volume = 0;
-    Set_Volume(0);
+
+    Defined_Volume = 15 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 15);
+
     digitalWrite(POWER_PIN, HIGH); // turn the amplifier power supply on
     uint8_t i;
     for (i = 0; i < 255; i++)
@@ -61,9 +62,6 @@ void Start()
 {
     Serial.println(F("Shutdown"));
     State = 0;
-
-    Defined_Volume = 0;
-    Set_Volume(0);
 
     // animation
     uint8_t i;
@@ -183,21 +181,21 @@ void Set_Volume(int16_t const &Volume_To_Set)
     Serial.print(F("Volume defined :"));
     Serial.println(Defined_Volume);
 
-    Current_Volume = 15 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 15);
+    Current_Volume = VOLUME_STEP - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, VOLUME_STEP);
     while (Current_Volume != Defined_Volume)
     {
-        if (Current_Volume < Defined_Volume)
+        if (Current_Volume > Defined_Volume)
         {
             digitalWrite(DOWN_PIN, HIGH);
             digitalWrite(UP_PIN, LOW);
         }
-        else if (Current_Volume > Defined_Volume)
+        else if (Current_Volume < Defined_Volume)
         {
             digitalWrite(DOWN_PIN, LOW);
             digitalWrite(UP_PIN, HIGH);
         }
         delay(50);
-        Current_Volume = 15 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 15);
+        Current_Volume = VOLUME_STEP - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, VOLUME_STEP);
     }
     digitalWrite(DOWN_PIN, LOW);
     digitalWrite(UP_PIN, LOW);

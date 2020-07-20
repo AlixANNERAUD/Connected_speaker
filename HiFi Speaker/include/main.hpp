@@ -4,34 +4,10 @@
 #include <Arduino.h>
 #include <IRremote.h>
 
-// Pinout
-#define POTENTIOMETER_PIN 33
-
-#define GREEN_LED_PIN 32
-#define RED_LED_PIN 14
-#define BLUE_LED_PIN 21
-
-#define UP_PIN 17
-#define DOWN_PIN 16
-
-#define INFRARED_RECEIVER_PIN 15
-
-#define POWER_PIN 13
-
-// IR Code
-#define MUTE_CODE 0xE0E0F00F
-#define VOLUME_DOWN_CODE 0xE0E0D02F
-#define VOLUME_UP_CODE 0xE0E0E01F
-#define A_CODE 0xE0E036C9
-
-//
-
 #define POWER_OFF_STATE 0 // black
-#define POWER_ON_WIFI_STATION_STATE 1 //blue
-#define POWER_ON_WIFI_ACCESS_POINT_STATE 2 //green
+#define POWER_ON_WIFI_STATION 1 //blue
+#define POWER_ON_WIFI_ACCESS_POINT 2 //green
 #define POWER_ON_WIFI_DISABLED 3 //yellow
-
-#define LED_FREQUENCY 60
 
 uint8_t State = 0;
 
