@@ -5,6 +5,89 @@ void setup()
     Serial.begin(115200);
     Infrared_Receiver.enableIRIn();
 
+    // Setup SPIFFS
+
+    if (!SPIFFS.begin(true))
+    {
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        State = POWER_OFF_ERROR;
+        return;
+    }
+
+    // Load configuration
+
+    if (!Get_Configuration())
+    {
+        
+    }
+
+    // Setup Web Server
+
+    Web_Server.on("/get", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        if (!Logged)
+        {
+            if (Request->hasParam("user") && Request->hasParam("password"))
+            {
+                String User_To_Check = Request->getParam("user")->value();
+                String Password_To_Check = Request->getParam("password")->value();
+                if (User_To_Check != User || )
+                {
+                    Logged = true;
+                }
+                else
+                {
+                    Logged = false;
+                }
+            }
+        }
+        else
+        {
+        }
+    });
+
+    Web_Server.on("/", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        if (Logged)
+        {
+            Request->redirect("/volume");
+        }
+        else
+        {
+            Request->redirect("/loggin");
+        }
+    });
+
+    Web_Server.on("/login", HTTP_GET, [](AsyncWebServerRequest * Request))
+    {
+        if (Logged)
+        {
+            Request->redirect("/volume");
+        }
+        else
+        {
+            if (Request->hasParam("user", true) && Request->hasParam("password", true))
+            {
+                String User = Request->getParam("user");
+                String Password = Request->getParam("password");
+            }
+            Request->send(SPIFFS, "/login.html", "text/html");
+        }
+        Request->send(204);
+    });
+
+    Web_Server.on("/refresh-volume", HTTP_GET, [](AsyncWebServerRequest) * Request)
+    {
+        if (Logged)
+        {
+            Request->send(200, "text/plain", Current_Volume);
+        }
+    }
+
+    Web_Server.on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(SPIFFS, "/w3.css", "text/css");
+    });
+
+    Web_Server.begin();
+
     // Setup Potentiometer
     pinMode(POTENTIOMETER_PIN, INPUT);
     pinMode(DOWN_PIN, OUTPUT);
@@ -31,66 +114,6 @@ void setup()
 void loop()
 {
     vTaskDelete(NULL);
-
-    WiFi.begin();
-
-    uint32_t i = millis();
-    while (WiFi.status() != WL_CONNECTE)
-    {
-        Serial.print(".");
-        delay(100);
-        if (WIFI_TIMEOUT < millis() - i)
-        {
-            State = POWER_ON_WIFI_ACCESS_POINT;
-            WiFi.softAP("ESP32", "1234");
-        }
-    
-
-    Web_Server.on("/", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        if (Logged)
-        {
-            Request->redirect("/volume");
-        }
-        else
-        {
-            Request->redirect("/loggin");
-        }
-    });
-
-    Web_Server.on("/login", HTTP_GET, [](AsyncWebServerRequest * Request))
-    {
-        if (Logged)
-        {
-            Request->redirect("/volume");
-        }
-        else
-        {
-            if(Request->hasParam("user", true) && Request->hasParam("password", true))
-            {
-                String User = Request->getParam("user");
-                String Password = Request->getParam("password");
-                
-            }
-            Request->send(SPIFFS, "/login.html", "text/html");
-        }
-        Request->send(204);
-    });
-
-    Web_Server.on("/refresh-volume", HTTP_GET, [](AsyncWebServerRequest) *Request)
-    {
-        if (Logged)
-        {
-            Request->send(200, "text/plain", Current_Volume);
-        }
-    }
-
-    Web_Server.on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SPIFFS, "/w3.css", "text/css");
-    });
-
-    Web_Server.begin();
-
-
 }
 
 void Start()
@@ -100,22 +123,36 @@ void Start()
 
     Defined_Volume = 15 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 15);
 
+    // WiFi initialize
+    WiFi.begin();
+    uint32_t i = millis();
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.print(".");
+        delay(100);
+        if (WIFI_TIMEOUT < millis() - i)
+        {
+            State = POWER_ON_WIFI_ACCESS_POINT;
+            WiFi.softAP("ESP32", "1234");
+        }
+    }
+
     digitalWrite(POWER_PIN, HIGH); // turn the amplifier power supply on
     uint8_t i;
     for (i = 0; i < 255; i++)
     {
         Set_LED_Color(i, 0, 0);
-        vTaskDelay(pdMS_TO_TICKS(5));
+        delay(1);
     }
     for (i = 0; i < 255; i++)
     {
         Set_LED_Color(255 - i, i, 0);
-        vTaskDelay(pdMS_TO_TICKS(5));
+        delay(1);
     }
     for (i = 0; i < 255; i++)
     {
         Set_LED_Color(0, 255 - i, i);
-        vTaskDelay(pdMS_TO_TICKS(5));
+        delay(1);
     }
 }
 
@@ -260,4 +297,9 @@ void Set_Volume(int16_t const &Volume_To_Set)
     }
     digitalWrite(DOWN_PIN, LOW);
     digitalWrite(UP_PIN, LOW);
+}
+
+uint8_t Get_Configuration()
+{
+
 }

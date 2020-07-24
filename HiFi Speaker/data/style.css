@@ -7,7 +7,7 @@
     -webkit-appearance: none;  /* Override default CSS styles */
     appearance: none;
     width: 50%; /* Full-width */
-    height: 24px; /* Specified height */
+    height: 32px; /* Specified height */
     background: black; /* Grey background */
     outline: none; /* Remove outline */
     opacity: 1; /* Set transparency (for mouse-over effects on hover) */

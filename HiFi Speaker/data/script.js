@@ -1,12 +1,13 @@
 $(document).ready(function() {
-    $("#Login").click(function{
+    $("#login").click(function{
         var User = $("#User").val();
         var Password = $("#Password").val();
         $.post("loggin", {
-            user: User
+            user: User,
             password: Password
         })
     })
+
 });
 
 
@@ -25,6 +26,13 @@ setInterval(function Refresh() {
     Request.send();
 
 }, 500);
+
+function Reduce_Volume()
+{
+    var Request = new XMLHttpRequest();
+
+    Request?on
+}
 
 function Open_Sidebar() {
     document.getElementById("Sidebar").style.display = "block";
