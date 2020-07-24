@@ -18,7 +18,6 @@ void setup()
 
     if (!Get_Configuration())
     {
-        
     }
 
     // Setup Web Server
@@ -26,22 +25,54 @@ void setup()
     Web_Server.on("/get", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (!Logged)
         {
-            if (Request->hasParam("user") && Request->hasParam("password"))
+            if (Request->hasParam("password"))
             {
-                String User_To_Check = Request->getParam("user")->value();
                 String Password_To_Check = Request->getParam("password")->value();
-                if (User_To_Check != User || )
+                if (Password_To_Check == Password)
                 {
                     Logged = true;
+                    Request->redirect("/volume");
                 }
                 else
                 {
                     Logged = false;
                 }
             }
+            else
+            {
+                Request->redirect("/login");
+            }
         }
         else
         {
+            if (Request->hasParam("set-code"))
+            {
+                vTaskSuspend(Check_Infrared_Receiver_Handle);
+                while (!Infrared_Receiver.decode(&Received_Data))
+                {
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                }
+
+                if (Request->getParam("set-code")->value() == "mute")
+                {
+
+                    Mute_Code = Received_Data.value;
+                }
+                else if (Request->getParam("set-code")->value() == "volume-up")
+                {
+                    Volume_Up_Code = Received_Data.value;
+                }
+                else if (Request->getParam("set-code")->value() == "volume-down")
+                {
+                    Volume_Down_Code = Received_Data.value;
+                }
+                else if (Request->getParam("set-code")->value() == = "wifi-switch")
+                {
+                    Volume_Up_Code = Received_Data.value;
+                }
+                Infrared_Receiver.resume();
+                vTaskResume(Check_Infrared_Receiver_Handle);
+            }
         }
     });
 
@@ -56,34 +87,66 @@ void setup()
         }
     });
 
-    Web_Server.on("/login", HTTP_GET, [](AsyncWebServerRequest * Request))
-    {
+    Web_Server.on("/login", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (Logged)
         {
             Request->redirect("/volume");
         }
         else
         {
-            if (Request->hasParam("user", true) && Request->hasParam("password", true))
-            {
-                String User = Request->getParam("user");
-                String Password = Request->getParam("password");
-            }
             Request->send(SPIFFS, "/login.html", "text/html");
         }
-        Request->send(204);
     });
 
-    Web_Server.on("/refresh-volume", HTTP_GET, [](AsyncWebServerRequest) * Request)
-    {
+    Web_Server.on("/sound", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (Logged)
         {
             Request->send(200, "text/plain", Current_Volume);
         }
-    }
+        else
+        {
+            Request->redirect("/login");
+        }
+    });
 
-    Web_Server.on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SPIFFS, "/w3.css", "text/css");
+    Web_Server.on("/update", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        if (Logged)
+        {
+            Request->send(SPIFFS, "/update.html", "text/html");
+        }
+        else
+        {
+            Request->redirect("/login");
+        }
+    });
+
+    Web_Server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *Request)
+    {
+        if (Logged)
+        {
+            Request->send(SPIFFS, "/wifi.html", "text/html");
+        }
+        else
+        {
+            Request->redirect("/login");
+
+        }
+    });
+
+    Web_Server.on("/remote", HTTP_GET, [](AsyncWebServerRequest *Request)
+    {
+        if (Logged)
+        { 
+            Request->send(SPIFFS, "/remote.html");
+        }
+        else
+        {
+            Request->redirect("/login");
+        }
+    });
+
+    Web_Server.on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/w3.css", "text/css");
     });
 
     Web_Server.begin();
@@ -121,7 +184,7 @@ void Start()
     Serial.println(F("Start"));
     State = 1;
 
-    Defined_Volume = 15 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 15);
+    Defined_Volume = VOLUME_STEP - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, VOLUME_STEP);
 
     // WiFi initialize
     WiFi.begin();
@@ -133,7 +196,7 @@ void Start()
         if (WIFI_TIMEOUT < millis() - i)
         {
             State = POWER_ON_WIFI_ACCESS_POINT;
-            WiFi.softAP("ESP32", "1234");
+            WiFi.softAP(Device_Name, Password);
         }
     }
 
@@ -207,27 +270,32 @@ void Check_Infrared_Receiver(void *pvParameters)
             Infrared_Receiver.resume();
             if (State == POWER_OFF_STATE)
             {
-                if (Received_Data.value == MUTE_CODE)
+                if (Received_Data.value == Power_Code)
                 {
                     Start();
                 }
             }
             else
             {
-                switch (Received_Data.value)
+                if (Received_Data.value == Power_Code)
                 {
-                case MUTE_CODE:
                     Shutdown();
                     break;
-                case VOLUME_UP_CODE:
-                    Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
-                    Set_Volume(1);
-                    break;
-                case VOLUME_DOWN_CODE:
+                }
+                else if (Received_Data.value == Volume_Down_Code)
+                {
                     Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
                     Set_Volume(-1);
                     break;
-                case A_CODE:
+                }
+                else if (Received_Data.value == Volume_Up_Code)
+                {
+                    Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
+                    Set_Volume(1);
+                    break;
+                }
+                else if (Received_Data.value == State_Code)
+                {
                     if (State != 0 && State < 3)
                     {
                         State++;
@@ -237,19 +305,16 @@ void Check_Infrared_Receiver(void *pvParameters)
                         State = 1;
                     }
                     break;
-                default:
-                    break;
                 }
             }
-
             Infrared_Receiver.resume();
         }
         switch (State)
         {
-        case POWER_ON_WIFI_STATION_STATE:
+        case POWER_ON_WIFI_STATION:
             Set_LED_Color(0, 0, 255);
             break;
-        case POWER_ON_WIFI_ACCESS_POINT_STATE:
+        case POWER_ON_WIFI_ACCESS_POINT:
             Set_LED_Color(0, 255, 0);
             break;
         case POWER_ON_WIFI_DISABLED:
@@ -299,7 +364,28 @@ void Set_Volume(int16_t const &Volume_To_Set)
     digitalWrite(UP_PIN, LOW);
 }
 
-uint8_t Get_Configuration()
+uint8_t Load_Configuration()
 {
+    Temporary_File = SPIFFS.open("/password", FILE_READ);
+    if (Temporary_File)
+    {
+        Password = Temporary_File.readString();
+    }
 
+    Temporary_File = SPIFFS.open("/code", FILE_READ);
+    if (Temporary_File)
+    {
+        //Power_Code = (uint32) Temporary_File.read();
+    }
+
+    Temporary_File = SPIFFS.open("/color", FILE_READ);
+    {
+        //
+    }
+
+    return true;
+}
+
+uint8_t Save_Configuration()
+{
 }

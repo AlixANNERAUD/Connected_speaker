@@ -15,13 +15,6 @@
 
 #define POWER_PIN 13
 
-// IR Code
-#define MUTE_CODE 0xE0E0F00F
-#define VOLUME_DOWN_CODE 0xE0E0D02F
-#define VOLUME_UP_CODE 0xE0E0E01F
-#define A_CODE 0xE0E036C9
-
-
 // Volume
 
 #define VOLUME_STEP 32
@@ -34,6 +27,7 @@
 #define POWER_ON_WIFI_STATION 0x0000FF // Blue
 #define POWER_ON_WIFI_ACCESS_POINT 0x00FF00 // Green
 #define POWER_ON_WIFI_DISABLED 0xFF00FF //Yellow
+#define POWER_OFF_ERROR 0xFF0000 //red
 
 #define LED_FREQUENCY 60
 
