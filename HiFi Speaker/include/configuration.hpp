@@ -37,4 +37,6 @@
 
 #define LED_FREQUENCY 60
 
+#define WIFI_TIMEOUT 10000
+
 #endif

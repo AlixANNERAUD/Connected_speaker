@@ -31,6 +31,66 @@ void setup()
 void loop()
 {
     vTaskDelete(NULL);
+
+    WiFi.begin();
+
+    uint32_t i = millis();
+    while (WiFi.status() != WL_CONNECTE)
+    {
+        Serial.print(".");
+        delay(100);
+        if (WIFI_TIMEOUT < millis() - i)
+        {
+            State = POWER_ON_WIFI_ACCESS_POINT;
+            WiFi.softAP("ESP32", "1234");
+        }
+    
+
+    Web_Server.on("/", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        if (Logged)
+        {
+            Request->redirect("/volume");
+        }
+        else
+        {
+            Request->redirect("/loggin");
+        }
+    });
+
+    Web_Server.on("/login", HTTP_GET, [](AsyncWebServerRequest * Request))
+    {
+        if (Logged)
+        {
+            Request->redirect("/volume");
+        }
+        else
+        {
+            if(Request->hasParam("user", true) && Request->hasParam("password", true))
+            {
+                String User = Request->getParam("user");
+                String Password = Request->getParam("password");
+                
+            }
+            Request->send(SPIFFS, "/login.html", "text/html");
+        }
+        Request->send(204);
+    });
+
+    Web_Server.on("/refresh-volume", HTTP_GET, [](AsyncWebServerRequest) *Request)
+    {
+        if (Logged)
+        {
+            Request->send(200, "text/plain", Current_Volume);
+        }
+    }
+
+    Web_Server.on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(SPIFFS, "/w3.css", "text/css");
+    });
+
+    Web_Server.begin();
+
+
 }
 
 void Start()
@@ -58,7 +118,8 @@ void Start()
         vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
- void Shutdown()
+
+void Shutdown()
 {
     Serial.println(F("Shutdown"));
     State = 0;
@@ -96,12 +157,12 @@ void Set_LED_Color(uint8_t const &Red, uint8_t const &Green, uint8_t const &Blue
     ledcWrite(2, 255 - Blue);
 }
 
-void Check_Infrared_Receiver(void* pvParameters)
+void Check_Infrared_Receiver(void *pvParameters)
 {
     (void)pvParameters;
     while (1)
     {
-        
+
         if (Infrared_Receiver.decode(&Received_Data))
         {
             Serial.print(F("IR :"));
@@ -113,7 +174,7 @@ void Check_Infrared_Receiver(void* pvParameters)
                 {
                     Start();
                 }
-            }    
+            }
             else
             {
                 switch (Received_Data.value)
@@ -143,21 +204,21 @@ void Check_Infrared_Receiver(void* pvParameters)
                     break;
                 }
             }
-            
+
             Infrared_Receiver.resume();
         }
         switch (State)
         {
-            case POWER_ON_WIFI_STATION_STATE:
-                Set_LED_Color(0, 0, 255);
-                break;
-            case POWER_ON_WIFI_ACCESS_POINT_STATE:
-                Set_LED_Color(0, 255, 0);
-                break;
-            case POWER_ON_WIFI_DISABLED:
-                Set_LED_Color(255, 255, 0);
-            default:
-                break;
+        case POWER_ON_WIFI_STATION_STATE:
+            Set_LED_Color(0, 0, 255);
+            break;
+        case POWER_ON_WIFI_ACCESS_POINT_STATE:
+            Set_LED_Color(0, 255, 0);
+            break;
+        case POWER_ON_WIFI_DISABLED:
+            Set_LED_Color(255, 255, 0);
+        default:
+            break;
         }
     }
 }
