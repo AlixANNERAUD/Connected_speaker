@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Hi-Fi System - LED</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="w3.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script type="text/javascript" src="common.js"></script>
+</head>
+
+<body class="w3-black w3-animate-opacity">
+    <!--Sidebar-->
+
+    <div class="w3-bar-block w3-center w3-xlarge w3-sidebar w3-collapse w3-black w3-animate-left w3-large w3-border-right "
+        style="z-index:3;width:300px;" id="Sidebar">
+        <a class="w3-bar-item w3-button w3-border-bottom w3-hover-red" href="javascript:void(0)" onclick="Close_Sidebar()">
+            <img src="images/bars.svg" height="20px" />
+            Menu
+        </a>
+        <a class="w3-bar-item w3-button w3-hover-orange" href="sound">
+            <img src="images/music.svg" height="20px" />
+            Sound
+        </a>
+        <a class="w3-bar-item w3-button w3-hover-green" href="wifi">
+            <img src="images/wifi.svg" height="20px" />
+            WiFi
+        </a>
+        <a class="w3-bar-item w3-button w3-hover-pale-green" href="bluetooth">
+            <img src="images/bluetooth-b.svg" height="20px" />
+            Bluetooth
+        </a>
+        <a class="w3-bar-item w3-button w3-hover-aqua" href="remote">
+            <img src="images/link.svg" height="20px" />
+            Remote
+        </a>
+        <a class="w3-bar-item w3-button w3-hover-blue" href="led">
+            <img src="images/lightbulb.svg" height="20px" />
+            LED
+        </a>
+        <a class="w3-bar-item w3-button w3-hover-grey" href="device">
+            <img src="images/microchip.svg" height="20px" />
+            Device
+        </a>
+        <a class="w3-bar-item w3-button w3-hover-orange" href="update">
+            <img src="images/sync-alt.svg" height="20px" />
+            Update
+        </a>
+
+        <a class="w3-bar-item w3-button w3-hover-orange" href="#">
+            <img src="images/sync-alt.svg" height="20px" />
+            Update
+        </a>
+
+    </div>
+
+
+
+    <div class="w3-overlay w3-hide-large" onclick="Close_Sidebar()" style="cursor:pointer" id="myOverlay"></div>
+
+    <div class="w3-border-bottom w3-main" style="margin-left:310px; margin-right: 10px;">
+        <!--Menu button-->
+        <div class="w3-top w3-theme w3-large w3-hide-large">
+            <img src="images/bars.svg" class="w3-button w3-xlarge" height="40px"
+                onclick="Open_Sidebar()" />
+        </div>
+
+        <input type="button" class="w3-button w3-white w3-top-right" onclick="Open_State_Menu()" id="State_Button">
+
+        <!--Header-->
+        <header class="w3-container w3-black w3-theme w3-padding w3-center">
+            <h1 class="w3-jumbo w3-padding-16">Hi-Fi System</h1>
+        </header>
+    </div>
+
+    <div class="w3-main" style="margin-left:310px; margin-right: 10px;">
+        <div class="w3-card w3-container w3-padding-large w3-section w3-black">
+            <h1 class="w3-xxxlarge w3-center w3-padding-large">
+                <img src="images/music.svg" height="40px" />
+                LED
+            </h1>
+
+            <input class="w3-button w3-black w3-center" type="color" id="Power Off Color Input" name="Power Off Color Input" value="#000000">
+            <label for="Power Off Color Input">Power Off State</label> 
+            <br>
+            <input class="w3-button w3-black w3-center" type="color" id="Power On Wireless Station" name="Power On Wireless Station" value="#00FF00">
+            <label for="Power Off Color Input">Power On Wireless Station</label>
+            <br>
+            <input class="w3-button w3-black w3-center" type="color" id="Power On Wireless Acces Point" name="Power Off Color Input" value="#0000FF">
+            <label for="Power Off Color Input">Power On Wireless Acces Point</label> 
+            <br>
+            <input class="w3-button w3-black w3-center" type="color" id="Power On Wireless Disabled" name="Power Off Color Input" value="#FFFF00">
+            <label for="Power Off Color Input">Power On Wireless Disabled</label> 
+
+
+        </div>
+
+        <!--Footer-->
+        <footer class="w3-container w3-bottom w3-padding-large w3-black w3-center w3-border-top">
+            <p>
+            <nav>
+                <a href="https://alixfaitgrr.fr" target="_blank">Alix ANNERAUD</a>
+            </nav>
+            </p>
+        </footer>
+
+    </div>
+
+</body>
+
+</html>
