@@ -291,7 +291,7 @@ void Check_Infrared_Receiver(void *pvParameters)
         if (Infrared_Receiver.decode(&Received_Data))
         {
             Serial.print(F("IR :"));
-            Serial.println(Received_Data.value, HEX);
+            serialPrintUint64(Received_Data.value, HEX);
             Infrared_Receiver.resume();
             if (State == POWER_OFF_STATE)
             {

@@ -2,7 +2,11 @@
 #define MAIN_HPP_INCLUDED
 
 #include <Arduino.h>
-#include <IRremote.h>
+
+#include <IRremoteESP8266.h>
+#include <IRrecv.h>
+#include <IRutils.h>
+
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
 #include <SPIFFS.h>
