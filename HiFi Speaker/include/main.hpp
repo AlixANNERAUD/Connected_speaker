@@ -34,11 +34,15 @@ String Password;
 String Device_Name;
 
 uint16_t LED_Frequency = 60; //Low as possible in order to do not disturb IR receiver
+
+//Color code
+
 uint32_t Power_Off_Color = POWER_OFF_COLOR; // black
-uint32_t Power_On_WiFi_Station_Color = POWER_ON_WIFI_STATION; // blue
-uint32_t Power_On_WiFi_Access_Point_Color = POWER_ON_WIFI_ACCESS_POINT; //yellow
-uint32_t Power_On_Disabled = POWER_ON_WIFI_DISABLED; //yellow
-uint32_t Power_Off_Error = POWER_OFF_ERROR;
+uint32_t Power_On_WiFi_Station_Color = POWER_ON_WIFI_STATION_COLOR; // blue
+uint32_t Power_On_WiFi_Access_Point_Color = POWER_ON_WIFI_ACCESS_POINT_COLOR; //yellow
+
+uint32_t Power_On_Disabled_Color = POWER_ON_WIFI_DISABLED_COLOR; //yellow
+uint32_t Power_Off_Error_Color = POWER_OFF_ERROR_COLOR;
 
 uint32_t Power_Code = 0xE0E0F00F;
 uint32_t Volume_Down_Code = 0xE0E0D02F;
@@ -54,6 +58,6 @@ void Set_LED_Color(uint8_t const&, uint8_t const&, uint8_t const&);
 void Set_Volume(int16_t const&);
 // Task
 void Check_Infrared_Receiver(void*);
-uint8_t Get_Configuration();
-
+uint8_t Load_Configuration();
+uint8_t Save_Configuration();
 #endif

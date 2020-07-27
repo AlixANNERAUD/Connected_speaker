@@ -7,16 +7,18 @@ void setup()
 
     // Setup SPIFFS
 
-    if (!SPIFFS.begin(true))
+    if (!SPIFFS.begin())
     {
         Serial.println("An Error has occurred while mounting SPIFFS");
         State = POWER_OFF_ERROR;
         return;
     }
 
+    //Start();
+
     // Load configuration
 
-    if (!Get_Configuration())
+    if (!Load_Configuration())
     {
     }
 
@@ -56,7 +58,7 @@ void setup()
                 if (Request->getParam("set-code")->value() == "mute")
                 {
 
-                    Mute_Code = Received_Data.value;
+                    Power_Code = Received_Data.value;
                 }
                 else if (Request->getParam("set-code")->value() == "volume-up")
                 {
@@ -66,7 +68,7 @@ void setup()
                 {
                     Volume_Down_Code = Received_Data.value;
                 }
-                else if (Request->getParam("set-code")->value() == = "wifi-switch")
+                else if (Request->getParam("set-code")->value() == "wifi-switch")
                 {
                     Volume_Up_Code = Received_Data.value;
                 }
@@ -83,7 +85,7 @@ void setup()
         }
         else
         {
-            Request->redirect("/loggin");
+            Request->redirect("/login");
         }
     });
 
@@ -101,7 +103,8 @@ void setup()
     Web_Server.on("/sound", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (Logged)
         {
-            Request->send(200, "text/plain", Current_Volume);
+
+            Request->send(SPIFFS, "/sound.html", "text/html");
         }
         else
         {
@@ -120,8 +123,7 @@ void setup()
         }
     });
 
-    Web_Server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *Request)
-    {
+    Web_Server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (Logged)
         {
             Request->send(SPIFFS, "/wifi.html", "text/html");
@@ -129,15 +131,38 @@ void setup()
         else
         {
             Request->redirect("/login");
-
         }
     });
 
-    Web_Server.on("/remote", HTTP_GET, [](AsyncWebServerRequest *Request)
-    {
+    Web_Server.on("/remote", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (Logged)
-        { 
+        {
             Request->send(SPIFFS, "/remote.html");
+        }
+        else
+        {
+            Request->redirect("/login");
+        }
+    });
+
+    // Images
+
+    Web_Server.on("/lock.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        if (Logged)
+        {
+            Request->send(SPIFFS, "/lock.svg");
+        }
+        else
+        {
+            Request->redirect("/login");
+        }
+    });
+
+
+    Web_Server.on("/wifi.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        if (Logged)
+        {
+            Request->send(SPIFFS, "/wifi.svg");
         }
         else
         {
@@ -188,15 +213,15 @@ void Start()
 
     // WiFi initialize
     WiFi.begin();
-    uint32_t i = millis();
+    uint32_t Timeout = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
         delay(100);
-        if (WIFI_TIMEOUT < millis() - i)
+        if (WIFI_TIMEOUT < millis() - Timeout)
         {
             State = POWER_ON_WIFI_ACCESS_POINT;
-            WiFi.softAP(Device_Name, Password);
+            //WiFi.softAP(Device_Name, Password);
         }
     }
 
@@ -366,6 +391,7 @@ void Set_Volume(int16_t const &Volume_To_Set)
 
 uint8_t Load_Configuration()
 {
+    Serial.println(F("Load configuration"));
     Temporary_File = SPIFFS.open("/password", FILE_READ);
     if (Temporary_File)
     {
@@ -388,4 +414,5 @@ uint8_t Load_Configuration()
 
 uint8_t Save_Configuration()
 {
+    return true;
 }
