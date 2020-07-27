@@ -1,12 +1,3 @@
-$(document).ready(function() {
-    $("#login_button").click(function(){
-        var Password = $("#password_input").val();
-        $.get("get", {
-            password: Password
-        })
-    })
-});
-
 var Volume_Slider = document.getElementById("VolumeSlider");
 var Volume_Value = document.getElementById("");
 
@@ -18,6 +9,15 @@ Volume_Slider.oninput = function() {
 }
 
 $.ajaxSetup({timeout:1000});
+
+function Login()
+{
+    var Password = $("#password_input").val();
+    $.post("get", {
+        password: Password
+    });
+}
+
 function Set_Volume(Value)
 {
     $.get("/?value=" + Value + "&");

@@ -14,29 +14,35 @@ void setup()
         return;
     }
 
-    //Start();
-
     // Load configuration
 
     if (!Load_Configuration())
     {
     }
 
+    Start();
+
     // Setup Web Server
 
-    Web_Server.on("/get", HTTP_GET, [](AsyncWebServerRequest *Request) {
+    Web_Server.on("/get", HTTP_POST, [](AsyncWebServerRequest *Request) {
         if (!Logged)
         {
-            if (Request->hasParam("password"))
+            
+            if (Request->hasParam("password", true))
             {
-                String Password_To_Check = Request->getParam("password")->value();
+                Request->send(204);
+                Serial.print("Received passord :");
+                String Password_To_Check = Request->getParam("password", true)->value();
+                Serial.println(Password_To_Check);
                 if (Password_To_Check == Password)
                 {
+                    Serial.println("Good password !");
                     Logged = true;
                     Request->redirect("/volume");
                 }
                 else
                 {
+                    Serial.println("Wrong password !");
                     Logged = false;
                 }
             }
@@ -44,10 +50,11 @@ void setup()
             {
                 Request->redirect("/login");
             }
+            
         }
         else
         {
-            if (Request->hasParam("set-code"))
+            if (Request->hasParam("set-code", true))
             {
                 vTaskSuspend(Check_Infrared_Receiver_Handle);
                 while (!Infrared_Receiver.decode(&Received_Data))
@@ -55,25 +62,37 @@ void setup()
                     vTaskDelay(pdMS_TO_TICKS(50));
                 }
 
-                if (Request->getParam("set-code")->value() == "mute")
+                if (Request->getParam("set-code", true)->value() == "mute")
                 {
 
                     Power_Code = Received_Data.value;
                 }
-                else if (Request->getParam("set-code")->value() == "volume-up")
+                else if (Request->getParam("set-code", true)->value() == "volume-up")
                 {
+                    
                     Volume_Up_Code = Received_Data.value;
                 }
-                else if (Request->getParam("set-code")->value() == "volume-down")
+                else if (Request->getParam("set-code", true)->value() == "volume-down")
                 {
                     Volume_Down_Code = Received_Data.value;
                 }
-                else if (Request->getParam("set-code")->value() == "wifi-switch")
+                else if (Request->getParam("set-code", true)->value() == "wifi-switch")
                 {
                     Volume_Up_Code = Received_Data.value;
                 }
                 Infrared_Receiver.resume();
                 vTaskResume(Check_Infrared_Receiver_Handle);
+            }
+            else if (Request->hasParam("get_volume", true))
+            {
+                Request->send(200, "text/plain", String(map(Defined_Volume, 0, 255, 0, VOLUME_STEP)));
+            }
+            else if (Request->hasParam("set_volume", true))
+            {
+                Request->send(204);
+                String Volume_To_Set = Request->getParam("set_volume", true)->value();
+                Defined_Volume = (uint8_t)map(Volume_To_Set.toInt(), 0, VOLUME_STEP, 0, 255);
+                Set_Volume();
             }
         }
     });
@@ -81,7 +100,7 @@ void setup()
     Web_Server.on("/", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (Logged)
         {
-            Request->redirect("/volume");
+            Request->redirect("/sound");
         }
         else
         {
@@ -92,11 +111,12 @@ void setup()
     Web_Server.on("/login", HTTP_GET, [](AsyncWebServerRequest *Request) {
         if (Logged)
         {
-            Request->redirect("/volume");
+            Request->redirect("/sound");
         }
         else
-        {
+        {     
             Request->send(SPIFFS, "/login.html", "text/html");
+            
         }
     });
 
@@ -148,26 +168,67 @@ void setup()
     // Images
 
     Web_Server.on("/lock.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        if (Logged)
-        {
-            Request->send(SPIFFS, "/lock.svg");
-        }
-        else
-        {
-            Request->redirect("/login");
-        }
+        Request->send(SPIFFS, "/lock.svg");
     });
 
+    Web_Server.on("/bars.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/bars.svg", "");
+    });
+    Web_Server.on("/bluetooth-b.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/bluetooth-b.svg", "");
+    });
+    Web_Server.on("/fast-backward.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/fast_backward.svg", "");
+    });
+    Web_Server.on("/lightbulb.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/lightbulb.svg", "");
+    });
+    Web_Server.on("/link.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/link.svg", "");
+    });
+    Web_Server.on("/microchip.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/microchip.svg", "");
+    });
+    Web_Server.on("/music.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/music.svg", "");
+    });
+    Web_Server.on("/plus.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/plus.svg", "");
+    });
+    Web_Server.on("/power-off.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/power-off.svg", "");
+    });
+    Web_Server.on("/sync-alt.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/sync-alt.js", "text/javascript");
+    });
 
     Web_Server.on("/wifi.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        if (Logged)
-        {
             Request->send(SPIFFS, "/wifi.svg");
-        }
-        else
-        {
-            Request->redirect("/login");
-        }
+    });
+
+    //Script
+
+    Web_Server.on("/common.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/common.js", "text/javascript");
+    });
+
+        Web_Server.on("/sound.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/sound.js", "text/javascript");
+    });
+
+    Web_Server.on("/login.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/login.js", "text/javascript");
+    });
+
+    Web_Server.on("/jquery-3.5.1.min.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/jquery-3.5.1.min.js", "text/javascript");
+    });
+
+    // Style sheet
+
+    Web_Server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *Request)
+    {
+        Request->send(SPIFFS, "/style.css", "text/css");
     });
 
     Web_Server.on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *Request) {
@@ -176,10 +237,19 @@ void setup()
 
     Web_Server.begin();
 
-    // Setup Potentiometer
-    pinMode(POTENTIOMETER_PIN, INPUT);
-    pinMode(DOWN_PIN, OUTPUT);
-    pinMode(UP_PIN, OUTPUT);
+    xTaskCreatePinnedToCore(Check_Infrared_Receiver, "CIR", 6 * 2014, NULL, 2, NULL, 1);
+}
+
+void loop()
+{
+    vTaskDelete(NULL);
+}
+
+void Start()
+{
+    Serial.println(F("Start"));
+    State = 1;
+
     // Setup LED
 
     ledcAttachPin(RED_LED_PIN, 0);
@@ -196,23 +266,17 @@ void setup()
     // Setup Power
     pinMode(POWER_PIN, OUTPUT);
     digitalWrite(POWER_PIN, LOW);
-    xTaskCreatePinnedToCore(Check_Infrared_Receiver, "CIR", 6 * 2014, NULL, 2, NULL, 1);
-}
 
-void loop()
-{
-    vTaskDelete(NULL);
-}
+    // Setup Potentiometer
 
-void Start()
-{
-    Serial.println(F("Start"));
-    State = 1;
+    pinMode(POTENTIOMETER_PIN, INPUT);
+    pinMode(DOWN_PIN, OUTPUT);
+    pinMode(UP_PIN, OUTPUT);
 
     Defined_Volume = VOLUME_STEP - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, VOLUME_STEP);
 
     // WiFi initialize
-    WiFi.begin();
+    WiFi.begin("Avrupa", "0749230994");
     uint32_t Timeout = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -220,9 +284,16 @@ void Start()
         delay(100);
         if (WIFI_TIMEOUT < millis() - Timeout)
         {
+            Serial.println(F("Create AP"));
             State = POWER_ON_WIFI_ACCESS_POINT;
             //WiFi.softAP(Device_Name, Password);
         }
+    }
+    Serial.println(F("Connected"));
+
+    if (!MDNS.begin("esp32")) {
+        Serial.println("Error setting up MDNS responder!");
+
     }
 
     digitalWrite(POWER_PIN, HIGH); // turn the amplifier power supply on
@@ -310,13 +381,15 @@ void Check_Infrared_Receiver(void *pvParameters)
                 else if (Received_Data.value == Volume_Down_Code)
                 {
                     Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
-                    Set_Volume(-1);
+                    Defined_Volume += 255 / VOLUME_STEP;
+                    Set_Volume();
                     break;
                 }
                 else if (Received_Data.value == Volume_Up_Code)
                 {
                     Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
-                    Set_Volume(1);
+                    Defined_Volume -= 255 / VOLUME_STEP;
+                    Set_Volume();
                     break;
                 }
                 else if (Received_Data.value == State_Code)
@@ -350,26 +423,15 @@ void Check_Infrared_Receiver(void *pvParameters)
     }
 }
 
-void Set_Volume(int16_t const &Volume_To_Set)
+void Set_Volume() 
 {
+    static uint8_t Current_Volume;
 
-    if (Volume_To_Set + Defined_Volume > 255)
-    {
-        Defined_Volume = 255;
-    }
-    else if (Volume_To_Set + Defined_Volume < 0)
-    {
-        Defined_Volume = 0;
-    }
-    else
-    {
-        Defined_Volume += Volume_To_Set;
-    }
-
-    Serial.print(F("Volume defined :"));
+    Serial.print(F("Set volume to :"));
     Serial.println(Defined_Volume);
 
-    Current_Volume = VOLUME_STEP - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, VOLUME_STEP);
+    Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
+    
     while (Current_Volume != Defined_Volume)
     {
         if (Current_Volume > Defined_Volume)
@@ -382,8 +444,8 @@ void Set_Volume(int16_t const &Volume_To_Set)
             digitalWrite(DOWN_PIN, LOW);
             digitalWrite(UP_PIN, HIGH);
         }
-        delay(50);
-        Current_Volume = VOLUME_STEP - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, VOLUME_STEP);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
     }
     digitalWrite(DOWN_PIN, LOW);
     digitalWrite(UP_PIN, LOW);

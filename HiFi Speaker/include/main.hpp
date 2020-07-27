@@ -9,6 +9,8 @@
 
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
+#include <ESPmDNS.h>
+
 #include <SPIFFS.h>
 #include "configuration.hpp"
 
@@ -21,7 +23,6 @@
 uint8_t State = 0;
 
 uint8_t Defined_Volume = 0;
-uint8_t Current_Volume = 0;
 
 xTaskHandle Check_Infrared_Receiver_Handle;
 
@@ -33,9 +34,9 @@ AsyncWebServer Web_Server(80);
 File Temporary_File;
 
 // Configuration variable
-String Password;
+String Password = "admin1234";
 
-String Device_Name;
+String Device_Name = "esp32";
 
 uint16_t LED_Frequency = 60; //Low as possible in order to do not disturb IR receiver
 
@@ -59,7 +60,7 @@ bool Logged;
 void Start();
 void Shutdown();
 void Set_LED_Color(uint8_t const&, uint8_t const&, uint8_t const&);
-void Set_Volume(int16_t const&);
+void Set_Volume();
 // Task
 void Check_Infrared_Receiver(void*);
 uint8_t Load_Configuration();

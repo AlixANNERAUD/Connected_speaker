@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="w3.css">
     <link rel="stylesheet" type="text/css" href="style.css">
-    <script type="text/javascript" src="script.js"></script>
+    <script type="text/javascript" src="sound.js"></script>
+    <script type="text/javascript" src="jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" src="common.js"></script>
+   
 </head>
 
 <body class="w3-black w3-animate-opacity">
@@ -14,41 +17,41 @@
 
     <div class="w3-bar-block w3-center w3-xlarge w3-sidebar w3-collapse w3-black w3-animate-left w3-large w3-border-right "
         style="z-index:3;width:300px;" id="Sidebar">
-        <a class="w3-bar-item w3-button w3-border-bottom w3-hover-red" href="javascript:void(0)" onclick="w3_close()">
-            <img src="images/bars.svg" height="20px" />
+        <a class="w3-bar-item w3-button w3-border-bottom w3-hover-red" href="javascript:void(0)" onclick="Close_Sidebar()">
+            <img src="/bars.svg" height="20px" />
             Menu
         </a>
         <a class="w3-bar-item w3-button w3-hover-orange" href="sound">
-            <img src="images/music.svg" height="20px" />
+            <img src="/music.svg" height="20px" />
             Sound
         </a>
         <a class="w3-bar-item w3-button w3-hover-green" href="wifi">
-            <img src="images/wifi.svg" height="20px" />
+            <img src="/wifi.svg" height="20px" />
             WiFi
         </a>
         <a class="w3-bar-item w3-button w3-hover-pale-green" href="bluetooth">
-            <img src="images/bluetooth-b.svg" height="20px" />
+            <img src="/bluetooth-b.svg" height="20px" />
             Bluetooth
         </a>
         <a class="w3-bar-item w3-button w3-hover-aqua" href="remote">
-            <img src="images/link.svg" height="20px" />
+            <img src="/link.svg" height="20px" />
             Remote
         </a>
         <a class="w3-bar-item w3-button w3-hover-blue" href="led">
-            <img src="images/lightbulb.svg" height="20px" />
+            <img src="/lightbulb.svg" height="20px" />
             LED
         </a>
         <a class="w3-bar-item w3-button w3-hover-grey" href="device">
-            <img src="images/microchip.svg" height="20px" />
+            <img src="/microchip.svg" height="20px" />
             Device
         </a>
         <a class="w3-bar-item w3-button w3-hover-orange" href="update">
-            <img src="images/sync-alt.svg" height="20px" />
+            <img src="/sync-alt.svg" height="20px" />
             Update
         </a>
 
         <a class="w3-bar-item w3-button w3-hover-orange" href="#">
-            <img src="images/sync-alt.svg" height="20px" />
+            <img src="/sync-alt.svg" height="20px" />
             Update
         </a>
 
@@ -61,7 +64,7 @@
     <div class="w3-border-bottom w3-main" style="margin-left:310px; margin-right: 10px;">
         <!--Menu button-->
         <div class="w3-top w3-theme w3-large w3-hide-large">
-            <img src="images/bars.svg" style="fill:white" class="w3-button w3-xlarge" height="40px"
+            <img src="/bars.svg" style="fill:white" class="w3-button w3-xlarge" height="40px"
                 onclick="Open_Sidebar()" />
         </div>
 
@@ -86,7 +89,8 @@
             <div class="slidecontainer w3-center w3-theme w3-padding">
                 <button onclick="Reduce_Volume()" class="w3-button w3-white w3-small w3-ripple"
                     style="width:32px; height: 32px">-</button>
-                <input type="range" min="0" max="31" value="0" class="slider w3-padding-16" id="VolumeSlider">
+                <input type="range" min="0" max="31" value="0" class="slider w3-padding-16" id="Volume_Slider" onclick="Set_Volume()">
+
                 <button onclick="Increase_Volume()" class="w3-button w3-white w3-large w3-ripple"
                     style="width:32px; height: 32px">+</button>
 
