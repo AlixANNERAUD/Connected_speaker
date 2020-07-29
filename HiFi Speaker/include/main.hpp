@@ -14,6 +14,8 @@
 #include <SPIFFS.h>
 #include "configuration.hpp"
 
+
+
 #define POWER_OFF_STATE 0 // black
 #define POWER_ON_WIFI_STATION 1 //blue
 #define POWER_ON_WIFI_ACCESS_POINT 2 //green
@@ -34,9 +36,11 @@ AsyncWebServer Web_Server(80);
 File Temporary_File;
 
 // Configuration variable
-String Password = "admin1234";
-
+String Device_Password = "admin1234";
 String Device_Name = "esp32";
+
+String SSID = "Avrupa";
+String Password = "0749230994";
 
 uint16_t LED_Frequency = 60; //Low as possible in order to do not disturb IR receiver
 
@@ -46,7 +50,7 @@ uint32_t Power_Off_Color = POWER_OFF_COLOR; // black
 uint32_t Power_On_WiFi_Station_Color = POWER_ON_WIFI_STATION_COLOR; // blue
 uint32_t Power_On_WiFi_Access_Point_Color = POWER_ON_WIFI_ACCESS_POINT_COLOR; //yellow
 
-uint32_t Power_On_Disabled_Color = POWER_ON_WIFI_DISABLED_COLOR; //yellow
+uint32_t Power_On_WiFi_Disabled_Color = POWER_ON_WIFI_DISABLED_COLOR; //yellow
 uint32_t Power_Off_Error_Color = POWER_OFF_ERROR_COLOR;
 
 uint32_t Power_Code = 0xE0E0F00F;
@@ -59,10 +63,16 @@ bool Logged;
 
 void Start();
 void Shutdown();
-void Set_LED_Color(uint8_t const&, uint8_t const&, uint8_t const&);
+void Set_LED_Color(uint32_t);
 void Set_Volume();
 // Task
 void Check_Infrared_Receiver(void*);
 uint8_t Load_Configuration();
 uint8_t Save_Configuration();
+
+void WiFi_Initialize();
+void Web_Server_Setup();
+
+void Callback();
+
 #endif

@@ -1,20 +1,13 @@
 setInterval(function Refresh() {
-
     var Request = new XMLHttpRequest();
-
     Request.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200)
         {
             document.getElementById("Volume_Slider").value = this.value;
         }
     };
-
     $.post("get", {get_volume});
-
-    Request.open("GET", "refresh-volume", true);
-    Request.send();
-
-}, 10000);
+}, 500);
 
 function Set_Volume()
 {

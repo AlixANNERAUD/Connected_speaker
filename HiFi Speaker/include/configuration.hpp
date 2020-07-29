@@ -20,6 +20,7 @@
 #define VOLUME_STEP 32
 //
 
+#define IR_THRESHOLD 40
 
 //Color State
 
@@ -32,5 +33,12 @@
 #define LED_FREQUENCY 60
 
 #define WIFI_TIMEOUT 10000
+
+#define LED_FILE "/led"
+#define REMOTE_FILE "/remote"
+#define WIFI_FILE "/wifi"
+#define DEVICE_FILE "/device"
+
+
 
 #endif

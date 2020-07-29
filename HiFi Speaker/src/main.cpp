@@ -3,38 +3,52 @@
 void setup()
 {
     Serial.begin(115200);
+    
+    esp_sleep_wakeup_cause_t Wakeup_Reason;
+    Wakeup_Reason = esp_sleep_get_wakeup_cause();
+
+    if (Wakeup_Reason != ESP_SLEEP_WAKEUP_TOUCHPAD)
+    {
+        Shutdown();
+    }
+
+
     Infrared_Receiver.enableIRIn();
 
-    // Setup SPIFFS
-
-    if (!SPIFFS.begin())
+    uint32_t Timeout = millis();
+    while (1)
     {
-        Serial.println("An Error has occurred while mounting SPIFFS");
-        State = POWER_OFF_ERROR;
-        return;
+        if (millis() - Timeout < 2000)
+        {
+            Shutdown();
+            break;
+        }
+        else if (Infrared_Receiver.decode(&Received_Data) && Received_Data.value == Power_Code)
+        {
+            Start();
+            break;
+        }
     }
+}
 
-    // Load configuration
+void loop()
+{
+    vTaskDelete(NULL);
+}
 
-    if (!Load_Configuration())
-    {
-    }
-
-    Start();
-
-    // Setup Web Server
-
+void Web_Server_Setup()
+{
     Web_Server.on("/get", HTTP_POST, [](AsyncWebServerRequest *Request) {
         if (!Logged)
         {
-            
+
             if (Request->hasParam("password", true))
             {
                 Request->send(204);
                 Serial.print("Received passord :");
                 String Password_To_Check = Request->getParam("password", true)->value();
                 Serial.println(Password_To_Check);
-                if (Password_To_Check == Password)
+                if (Password_To_Check == Device_Password)
                 {
                     Serial.println("Good password !");
                     Logged = true;
@@ -50,7 +64,6 @@ void setup()
             {
                 Request->redirect("/login");
             }
-            
         }
         else
         {
@@ -69,7 +82,7 @@ void setup()
                 }
                 else if (Request->getParam("set-code", true)->value() == "volume-up")
                 {
-                    
+
                     Volume_Up_Code = Received_Data.value;
                 }
                 else if (Request->getParam("set-code", true)->value() == "volume-down")
@@ -94,6 +107,13 @@ void setup()
                 Defined_Volume = (uint8_t)map(Volume_To_Set.toInt(), 0, VOLUME_STEP, 0, 255);
                 Set_Volume();
             }
+            else if (Request->hasParam("set_wifi_ssid", true) && Request->hasParam("set_wifi_password", true))
+            {
+                Request->send(204);
+                SSID = Request->getParam("set_wifi_ssid", true)->value();
+                Password = Request->getParam("set_wifi_password", true)->value();
+                WiFi_Initialize();
+            }
         }
     });
 
@@ -114,9 +134,8 @@ void setup()
             Request->redirect("/sound");
         }
         else
-        {     
+        {
             Request->send(SPIFFS, "/login.html", "text/html");
-            
         }
     });
 
@@ -203,7 +222,7 @@ void setup()
     });
 
     Web_Server.on("/wifi.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-            Request->send(SPIFFS, "/wifi.svg");
+        Request->send(SPIFFS, "/wifi.svg");
     });
 
     //Script
@@ -212,7 +231,7 @@ void setup()
         Request->send(SPIFFS, "/common.js", "text/javascript");
     });
 
-        Web_Server.on("/sound.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+    Web_Server.on("/sound.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
         Request->send(SPIFFS, "/sound.js", "text/javascript");
     });
 
@@ -226,8 +245,7 @@ void setup()
 
     // Style sheet
 
-    Web_Server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *Request)
-    {
+    Web_Server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *Request) {
         Request->send(SPIFFS, "/style.css", "text/css");
     });
 
@@ -236,47 +254,14 @@ void setup()
     });
 
     Web_Server.begin();
-
-    xTaskCreatePinnedToCore(Check_Infrared_Receiver, "CIR", 6 * 2014, NULL, 2, NULL, 1);
 }
 
-void loop()
+void WiFi_Initialize()
 {
-    vTaskDelete(NULL);
-}
-
-void Start()
-{
-    Serial.println(F("Start"));
-    State = 1;
-
-    // Setup LED
-
-    ledcAttachPin(RED_LED_PIN, 0);
-    ledcAttachPin(GREEN_LED_PIN, 1);
-    ledcAttachPin(BLUE_LED_PIN, 2);
-    ledcSetup(0, LED_FREQUENCY, 8);
-    ledcSetup(1, LED_FREQUENCY, 8);
-    ledcSetup(2, LED_FREQUENCY, 8);
-    ledcWrite(0, 255);
-    ledcWrite(1, 255);
-    ledcWrite(2, 255);
-    Set_LED_Color(0, 0, 0);
-
-    // Setup Power
-    pinMode(POWER_PIN, OUTPUT);
-    digitalWrite(POWER_PIN, LOW);
-
-    // Setup Potentiometer
-
-    pinMode(POTENTIOMETER_PIN, INPUT);
-    pinMode(DOWN_PIN, OUTPUT);
-    pinMode(UP_PIN, OUTPUT);
-
-    Defined_Volume = VOLUME_STEP - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, VOLUME_STEP);
-
     // WiFi initialize
-    WiFi.begin("Avrupa", "0749230994");
+    Web_Server.end();
+    char Temporary_SSID[sizeof(SSID)], Temporary_Password[sizeof(Password)];
+    WiFi.begin(Temporary_SSID, Temporary_Password);
     uint32_t Timeout = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -291,13 +276,70 @@ void Start()
     }
     Serial.println(F("Connected"));
 
-    if (!MDNS.begin("esp32")) {
+    if (!MDNS.begin("esp32"))
+    {
         Serial.println("Error setting up MDNS responder!");
-
     }
 
+    Web_Server_Setup();
+}
+
+void Start()
+{
+    Serial.println(F("Start"));
+    State = 1;
+
+    // Setup SPIFFS
+    if (!SPIFFS.begin())
+    {
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        State = POWER_OFF_ERROR;
+        return;
+    }
+
+    // Load configuration
+
+    if (!Load_Configuration())
+    {
+    }
+
+    // Setup Web Server
+
+    xTaskCreatePinnedToCore(Check_Infrared_Receiver, "CIR", 6 * 2014, NULL, 2, NULL, 1);
+
+
+    // Setup LED
+
+    ledcAttachPin(RED_LED_PIN, 0);
+    ledcAttachPin(GREEN_LED_PIN, 1);
+    ledcAttachPin(BLUE_LED_PIN, 2);
+    ledcSetup(0, LED_FREQUENCY, 8);
+    ledcSetup(1, LED_FREQUENCY, 8);
+    ledcSetup(2, LED_FREQUENCY, 8);
+    ledcWrite(0, 255);
+    ledcWrite(1, 255);
+    ledcWrite(2, 255);
+    Set_LED_Color(0x000000);
+
+    // Setup Power
+
+    pinMode(POWER_PIN, OUTPUT);
+    digitalWrite(POWER_PIN, LOW);
+
+    // Setup Potentiometer
+
+    pinMode(POTENTIOMETER_PIN, INPUT);
+    pinMode(DOWN_PIN, OUTPUT);
+    pinMode(UP_PIN, OUTPUT);
+
+    Defined_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
+
+    WiFi_Initialize();
+
+    //
+
     digitalWrite(POWER_PIN, HIGH); // turn the amplifier power supply on
-    uint8_t i;
+    /*uint8_t i;
     for (i = 0; i < 255; i++)
     {
         Set_LED_Color(i, 0, 0);
@@ -312,7 +354,7 @@ void Start()
     {
         Set_LED_Color(0, 255 - i, i);
         delay(1);
-    }
+    }*/
 }
 
 void Shutdown()
@@ -321,7 +363,7 @@ void Shutdown()
     State = 0;
 
     // animation
-    uint8_t i;
+    /*uint8_t i;
     for (i = 0; i < 255; i++)
     {
         Set_LED_Color(0, 0, i);
@@ -341,13 +383,36 @@ void Shutdown()
     {
         Set_LED_Color(i, 0, 0);
         vTaskDelay(pdMS_TO_TICKS(5));
-    }
+    }*/
+
     digitalWrite(POWER_PIN, LOW);
-    Set_LED_Color(0, 0, 0);
+
+    Set_LED_Color(0x000000);
+
+    touchAttachInterrupt(T3, Callback, IR_THRESHOLD);
+    esp_sleep_enable_touchpad_wakeup();
+    esp_deep_sleep_start();
+
 }
 
-void Set_LED_Color(uint8_t const &Red, uint8_t const &Green, uint8_t const &Blue)
+void Callback()
 {
+
+}
+
+void Set_LED_Color(uint32_t Color)
+{
+    static uint8_t Red, Green, Blue;
+    Serial.print("Received color :");
+    Serial.print(Color);
+    Red = (uint8_t)Color;
+    Green = (uint8_t)(Color << 8);
+    Blue = (uint8_t)(Color << 16);
+    Serial.println("Decoded color :");
+    Serial.println(Red);
+    Serial.println(Green);
+    Serial.println(Blue);
+
     ledcWrite(0, 255 - Red);
     ledcWrite(1, 255 - Green);
     ledcWrite(2, 255 - Blue);
@@ -380,14 +445,14 @@ void Check_Infrared_Receiver(void *pvParameters)
                 }
                 else if (Received_Data.value == Volume_Down_Code)
                 {
-                    Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
+                    //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
                     Defined_Volume += 255 / VOLUME_STEP;
                     Set_Volume();
                     break;
                 }
                 else if (Received_Data.value == Volume_Up_Code)
                 {
-                    Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
+                    //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
                     Defined_Volume -= 255 / VOLUME_STEP;
                     Set_Volume();
                     break;
@@ -410,20 +475,20 @@ void Check_Infrared_Receiver(void *pvParameters)
         switch (State)
         {
         case POWER_ON_WIFI_STATION:
-            Set_LED_Color(0, 0, 255);
+            Set_LED_Color(Power_On_WiFi_Station_Color);
             break;
         case POWER_ON_WIFI_ACCESS_POINT:
-            Set_LED_Color(0, 255, 0);
+            Set_LED_Color(Power_On_WiFi_Access_Point_Color);
             break;
         case POWER_ON_WIFI_DISABLED:
-            Set_LED_Color(255, 255, 0);
+            Set_LED_Color(Power_On_WiFi_Disabled_Color);
         default:
             break;
         }
     }
 }
 
-void Set_Volume() 
+void Set_Volume()
 {
     static uint8_t Current_Volume;
 
@@ -431,7 +496,7 @@ void Set_Volume()
     Serial.println(Defined_Volume);
 
     Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
-    
+
     while (Current_Volume != Defined_Volume)
     {
         if (Current_Volume > Defined_Volume)
@@ -454,27 +519,177 @@ void Set_Volume()
 uint8_t Load_Configuration()
 {
     Serial.println(F("Load configuration"));
-    Temporary_File = SPIFFS.open("/password", FILE_READ);
+    char Temporary_Char;
+    // Device
+
+    Temporary_File = SPIFFS.open("/device", FILE_READ);
     if (Temporary_File)
     {
-        Password = Temporary_File.readString();
+        Device_Password = "";
+        Device_Name = "";
+        Temporary_File.seek(0);
+        while (Temporary_File.available())
+        {
+            Temporary_Char = Temporary_File.read();
+            if (Temporary_Char == 0x0D)
+            {
+                Temporary_File.read();
+                break;
+            }
+            else if (Temporary_Char == 0x0A)
+            {
+                break;
+            }
+            else
+            {
+                Device_Name += Temporary_Char;
+            }
+        }
+        while (Temporary_File.available())
+        {
+            Temporary_Char = Temporary_File.read();
+            if (Temporary_Char == 0x0D)
+            {
+                Temporary_File.read();
+                break;
+            }
+            else if (Temporary_Char == 0x0A)
+            {
+                break;
+            }
+            else
+            {
+                Device_Password += Temporary_Char;
+            }
+        }
+        Serial.println(Device_Name);
+        Serial.println(Device_Password);
+        Temporary_File.close();
     }
 
-    Temporary_File = SPIFFS.open("/code", FILE_READ);
+    Temporary_File = SPIFFS.open("/wifi");
     if (Temporary_File)
     {
-        //Power_Code = (uint32) Temporary_File.read();
-    }
+        SSID = "";
+        Password = "";
+        Temporary_File.seek(0);
+        while (Temporary_File.available())
+        {
+            Temporary_Char = Temporary_File.read();
+            if (Temporary_Char == 0x0D)
+            {
+                Temporary_File.read();
+                break;
+            }
+            else if (Temporary_Char == 0x0A)
+            {
+                break;
+            }
+            else
+            {
+                SSID += Temporary_Char;
+            }
+        }
+        while (Temporary_File.available())
+        {
+            Temporary_Char = Temporary_File.read();
+            if (Temporary_Char == 0x0D)
+            {
+                Temporary_File.read();
+                break;
+            }
+            else if (Temporary_Char == 0x0A)
+            {
+                break;
+            }
+            else
+            {
+                Password += Temporary_Char;
+            }
+        }
+        Temporary_File.close();
+        Serial.println(SSID);
+        Serial.println(Password);
+    }    
 
-    Temporary_File = SPIFFS.open("/color", FILE_READ);
+    Temporary_File = SPIFFS.open(REMOTE_FILE, FILE_READ);
+    if (Temporary_File)
     {
-        //
+        Temporary_File.seek(0);
+        Power_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(4);
+        Volume_Up_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(8);
+        Volume_Down_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(12);
+        State_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Serial.println(Power_Code, HEX);
+        Serial.println(Volume_Up_Code, HEX);
+        Serial.println(Volume_Down_Code, HEX);
+        Serial.println(State_Code, HEX);
+
     }
+    Temporary_File.close();
+
+    Temporary_File = SPIFFS.open(LED_FILE, FILE_READ);
+    if (Temporary_File)
+    {
+        Temporary_File.seek(0);
+        Power_Off_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(4);
+        Power_On_WiFi_Station_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(8);
+        Power_On_WiFi_Access_Point_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(12);
+        Power_On_WiFi_Disabled_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Serial.println(Power_Off_Color, HEX);
+        Serial.println(Power_On_WiFi_Station_Color, HEX);
+        Serial.println(Power_On_WiFi_Station_Color, HEX);
+        Serial.println(Power_On_WiFi_Disabled_Color, HEX);
+    }    
+    
 
     return true;
 }
 
-uint8_t Save_Configuration()
+uint8_t Save_Configuration(uint8_t const& Parameters_To_Save)
 {
+    switch (Parameters_To_Save)
+    {
+    case 0: //all
+        break;
+    case 1: //device name + password
+        Temporary_File = SPIFFS.open(DEVICE_FILE, FILE_WRITE);
+        Temporary_File.print(Device_Name);
+        Temporary_File.write(0x0D);
+        Temporary_File.write(0x0A);
+        Temporary_File.print(Device_Password);
+        Temporary_File.close();
+    case 2: //wifi ssid + password
+        Temporary_File = SPIFFS.open(WIFI_FILE, FILE_WRITE);
+        Temporary_File.print(SSID);
+        Temporary_File.write(0x0D);
+        Temporary_File.write(0x0A);
+        Temporary_File.print(Password);
+        Temporary_File.write(0x0D);
+        Temporary_File.write(0x0A);
+        Temporary_File.close();
+    case 3: // IR code
+        Temporary_File = SPIFFS.open(REMOTE_FILE, FILE_WRITE);
+        Temporary_File.print(Power_Code);
+        Temporary_File.print(Volume_Up_Code);
+        Temporary_File.print(Volume_Down_Code);
+        Temporary_File.print(State_Code);
+        Temporary_File.close();
+    case 4: // LED color
+        Temporary_File = SPIFFS.open(LED_FILE, FILE_WRITE);
+        Temporary_File.print(Power_Off_Color);
+        Temporary_File.print(Power_On_WiFi_Station_Color);
+        Temporary_File.print(Power_On_WiFi_Access_Point_Color);
+        Temporary_File.print(Power_On_WiFi_Disabled_Color);
+        Temporary_File.close();
+    default:
+        break;
+    }
     return true;
 }
