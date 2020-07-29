@@ -20,19 +20,23 @@
 #define VOLUME_STEP 32
 //
 
-#define IR_THRESHOLD 40
+#define IR_THRESHOLD 255
 
 //Color State
 
 #define POWER_OFF_COLOR 0x000000 // Black
+#define POWER_ON_START_COLOR 0xFF8000 // Orange
 #define POWER_ON_WIFI_STATION_COLOR 0x0000FF // Blue
 #define POWER_ON_WIFI_ACCESS_POINT_COLOR 0x00FF00 // Green
 #define POWER_ON_WIFI_DISABLED_COLOR 0xFF00FF //Yellow
-#define POWER_OFF_ERROR_COLOR 0xFF0000 //red
+#define POWER_ON_ERROR_COLOR 0xFF0000 //red
 
 #define LED_FREQUENCY 60
 
 #define WIFI_TIMEOUT 10000
+#define WAKEUP_TIMEOUT 2000
+
+#define LED_FADE_DELAY 1
 
 #define LED_FILE "/led"
 #define REMOTE_FILE "/remote"

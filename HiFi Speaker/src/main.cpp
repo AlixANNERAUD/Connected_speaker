@@ -3,31 +3,43 @@
 void setup()
 {
     Serial.begin(115200);
-    
+
     esp_sleep_wakeup_cause_t Wakeup_Reason;
     Wakeup_Reason = esp_sleep_get_wakeup_cause();
 
-    if (Wakeup_Reason != ESP_SLEEP_WAKEUP_TOUCHPAD)
+    if (Wakeup_Reason == ESP_SLEEP_WAKEUP_EXT0)
     {
-        Shutdown();
-    }
-
-
-    Infrared_Receiver.enableIRIn();
-
-    uint32_t Timeout = millis();
-    while (1)
-    {
-        if (millis() - Timeout < 2000)
+        Serial.println("IR sensor");
+        Infrared_Receiver.enableIRIn();
+        uint32_t Timeout = millis();
+        while (millis() - Timeout < WAKEUP_TIMEOUT)
+        {
+            if (Infrared_Receiver.decode(&Received_Data))
+            {
+                if (Received_Data.value == Power_Code || Received_Data.value == Volume_Up_Code || Received_Data.value == Volume_Down_Code || Received_Data.value == State_Code)
+                {
+                    Start();
+                    Timeout = 0;
+                }
+                Received_Data.value = 0;
+                Infrared_Receiver.resume();
+            }
+        }
+        if (Timeout != 0)
         {
             Shutdown();
-            break;
         }
-        else if (Infrared_Receiver.decode(&Received_Data) && Received_Data.value == Power_Code)
-        {
-            Start();
-            break;
-        }
+    }
+    else if (Wakeup_Reason == ESP_SLEEP_WAKEUP_UNDEFINED)
+    {
+        Serial.println("Plugged into power wall");
+        Infrared_Receiver.enableIRIn();
+        Start();
+    }
+    else
+    {
+        Serial.println("Other wakeup reason");
+        Shutdown();
     }
 }
 
@@ -36,8 +48,11 @@ void loop()
     vTaskDelete(NULL);
 }
 
-void Web_Server_Setup()
+void Setup_Web_Server()
 {
+
+    Serial.println(F("Setup Web Server"));
+
     Web_Server.on("/get", HTTP_POST, [](AsyncWebServerRequest *Request) {
         if (!Logged)
         {
@@ -69,7 +84,7 @@ void Web_Server_Setup()
         {
             if (Request->hasParam("set-code", true))
             {
-                vTaskSuspend(Check_Infrared_Receiver_Handle);
+                vTaskSuspend(Infrared_Receiver_Handle);
                 while (!Infrared_Receiver.decode(&Received_Data))
                 {
                     vTaskDelay(pdMS_TO_TICKS(50));
@@ -94,7 +109,7 @@ void Web_Server_Setup()
                     Volume_Up_Code = Received_Data.value;
                 }
                 Infrared_Receiver.resume();
-                vTaskResume(Check_Infrared_Receiver_Handle);
+                vTaskResume(Infrared_Receiver_Handle);
             }
             else if (Request->hasParam("get_volume", true))
             {
@@ -260,66 +275,64 @@ void WiFi_Initialize()
 {
     // WiFi initialize
     Web_Server.end();
+
     char Temporary_SSID[sizeof(SSID)], Temporary_Password[sizeof(Password)];
+    SSID.toCharArray(Temporary_SSID, sizeof(SSID));
+    Password.toCharArray(Temporary_Password, sizeof(Password));
+    char Temporary_Device_Name[sizeof(Device_Name)], Temporary_Device_Password[sizeof(Device_Password)];
+    Device_Name.toCharArray(Temporary_Device_Name, sizeof(Device_Name));
+    Device_Password.toCharArray(Temporary_Device_Password, sizeof(Device_Password));
     WiFi.begin(Temporary_SSID, Temporary_Password);
+    WiFi.setHostname(Temporary_Device_Name);
     uint32_t Timeout = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
-        delay(100);
+        vTaskDelay(pdMS_TO_TICKS(100));
         if (WIFI_TIMEOUT < millis() - Timeout)
         {
-            Serial.println(F("Create AP"));
-            State = POWER_ON_WIFI_ACCESS_POINT;
-            //WiFi.softAP(Device_Name, Password);
+            break;
         }
-    }
-    Serial.println(F("Connected"));
 
-    if (!MDNS.begin("esp32"))
+    }
+    if (WiFi.status() != WL_CONNECTED)
+    {
+         Serial.println(F("Create AP"));
+            Set_State(POWER_ON_WIFI_ACCESS_POINT_STATE);
+            WiFi.softAP(Temporary_Device_Name, Temporary_Device_Password);
+    }
+    else
+    {
+        Serial.println(F("Connected"));
+        Set_State(POWER_ON_WIFI_STATION_STATE);
+    }
+    
+    if (!MDNS.begin(Temporary_Device_Name))
     {
         Serial.println("Error setting up MDNS responder!");
     }
-
-    Web_Server_Setup();
 }
 
 void Start()
 {
     Serial.println(F("Start"));
-    State = 1;
-
-    // Setup SPIFFS
-    if (!SPIFFS.begin())
-    {
-        Serial.println("An Error has occurred while mounting SPIFFS");
-        State = POWER_OFF_ERROR;
-        return;
-    }
-
-    // Load configuration
-
-    if (!Load_Configuration())
-    {
-    }
-
-    // Setup Web Server
-
-    xTaskCreatePinnedToCore(Check_Infrared_Receiver, "CIR", 6 * 2014, NULL, 2, NULL, 1);
-
-
     // Setup LED
 
     ledcAttachPin(RED_LED_PIN, 0);
     ledcAttachPin(GREEN_LED_PIN, 1);
     ledcAttachPin(BLUE_LED_PIN, 2);
+
     ledcSetup(0, LED_FREQUENCY, 8);
     ledcSetup(1, LED_FREQUENCY, 8);
     ledcSetup(2, LED_FREQUENCY, 8);
+
     ledcWrite(0, 255);
     ledcWrite(1, 255);
     ledcWrite(2, 255);
-    Set_LED_Color(0x000000);
+
+    xTaskCreatePinnedToCore(LED_Task, "LED", 2 * 1024, NULL, 2, &LED_Handle, 0);
+
+    Set_State(POWER_ON_START);
 
     // Setup Power
 
@@ -334,11 +347,30 @@ void Start()
 
     Defined_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
 
+    // Setup SPIFFS
+    if (!SPIFFS.begin())
+    {
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        Set_State(POWER_ON_ERROR_STATE);
+        return;
+    }
+
+    // Load configuration
+
+    if (!Load_Configuration())
+    {
+        Set_State(POWER_ON_ERROR_STATE);
+    }
+
     WiFi_Initialize();
 
     //
 
+    Setup_Web_Server();
+
+    // Finaly : turn the amplifier on
     digitalWrite(POWER_PIN, HIGH); // turn the amplifier power supply on
+
     /*uint8_t i;
     for (i = 0; i < 255; i++)
     {
@@ -355,12 +387,97 @@ void Start()
         Set_LED_Color(0, 255 - i, i);
         delay(1);
     }*/
+
+    // Setup Web Server
+
+    xTaskCreatePinnedToCore(Infrared_Receiver_Task, "CIR", 6 * 1024, NULL, 2, &Infrared_Receiver_Handle, 1);
+    
+}
+
+void Set_State(uint8_t const& State_To_Set)
+{
+    State = State_To_Set;
+    switch (State)
+    {
+    case POWER_OFF_STATE:
+        Set_LED_Color(0x000000);
+        esp_sleep_enable_ext0_wakeup(GPIO_NUM_15, LOW);
+        esp_deep_sleep_start();
+    case POWER_ON_START:
+        Set_LED_Color(POWER_ON_START_COLOR);
+        break;
+    case POWER_ON_WIFI_STATION_STATE:
+        Set_LED_Color(Power_On_WiFi_Station_Color);
+        break;
+    case POWER_ON_WIFI_ACCESS_POINT_STATE:
+        Set_LED_Color(Power_On_WiFi_Access_Point_Color);
+        break;
+    case POWER_ON_WIFI_DISABLED_STATE:
+        WiFi.mode(WIFI_MODE_NULL);
+        Set_LED_Color(Power_On_WiFi_Disabled_Color);
+        break;
+    case POWER_ON_ERROR_STATE:
+        Set_LED_Color(POWER_ON_ERROR_COLOR);
+        break;
+    default:
+        break;
+    }
+}
+
+void LED_Task(void *pvParameters) //fade LED color
+{
+    (void)pvParameters;
+    uint8_t Current_Red = 0, Current_Green = 0, Current_Blue = 0;
+
+    while (1)
+    {
+
+        if (Current_Red == Defined_Red && Current_Green == Defined_Green && Current_Blue == Defined_Blue)
+        {
+            LED_Task_Running = false;
+            vTaskSuspend(LED_Handle);
+        }
+
+        if (Current_Red < Defined_Red)
+        {
+            Current_Red++;
+            ledcWrite(0, 255 - Current_Red);
+        }
+        else if (Current_Red > Defined_Red)
+        {
+            Current_Red--;
+            ledcWrite(0, 255 - Current_Red);
+        }
+
+        if (Current_Green < Defined_Green)
+        {
+            Current_Green++;
+            ledcWrite(0, 255 - Current_Green);
+        }
+        else if (Current_Green > Defined_Green)
+        {
+            Current_Green--;
+            ledcWrite(0, 255 - Current_Green);
+        }
+
+        if (Current_Blue < Defined_Blue)
+        {
+            Current_Blue++;
+            ledcWrite(0, 255 - Current_Blue);
+        }
+        else if (Current_Blue > Defined_Blue)
+        {
+            Current_Blue--;
+            ledcWrite(0, 255 - Current_Blue);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(LED_FADE_DELAY));
+    }
 }
 
 void Shutdown()
 {
     Serial.println(F("Shutdown"));
-    State = 0;
 
     // animation
     /*uint8_t i;
@@ -387,103 +504,72 @@ void Shutdown()
 
     digitalWrite(POWER_PIN, LOW);
 
-    Set_LED_Color(0x000000);
+    //Set_LED_Color(0x000000);
 
-    touchAttachInterrupt(T3, Callback, IR_THRESHOLD);
-    esp_sleep_enable_touchpad_wakeup();
-    esp_deep_sleep_start();
-
+    Set_State(POWER_OFF_STATE);
 }
 
 void Callback()
 {
-
 }
 
-void Set_LED_Color(uint32_t Color)
+void Set_LED_Color(uint32_t Color_To_Set)
 {
-    static uint8_t Red, Green, Blue;
-    Serial.print("Received color :");
-    Serial.print(Color);
-    Red = (uint8_t)Color;
-    Green = (uint8_t)(Color << 8);
-    Blue = (uint8_t)(Color << 16);
+    while (LED_Task_Running == true)
+    {
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+    Serial.println(Color_To_Set, HEX);
+    Defined_Red = (uint8_t)(Color_To_Set >> 16);
+    Defined_Green = (uint8_t)(Color_To_Set >> 8);
+    Defined_Blue = (uint8_t)(Color_To_Set);
     Serial.println("Decoded color :");
-    Serial.println(Red);
-    Serial.println(Green);
-    Serial.println(Blue);
-
-    ledcWrite(0, 255 - Red);
-    ledcWrite(1, 255 - Green);
-    ledcWrite(2, 255 - Blue);
+    Serial.println(Defined_Red, HEX);
+    Serial.println(Defined_Green, HEX);
+    Serial.println(Defined_Blue, HEX);
+    LED_Task_Running = true;
+    vTaskResume(LED_Handle);
 }
 
-void Check_Infrared_Receiver(void *pvParameters)
+void Infrared_Receiver_Task(void *pvParameters)
 {
     (void)pvParameters;
     while (1)
     {
-
         if (Infrared_Receiver.decode(&Received_Data))
         {
             Serial.print(F("IR :"));
             serialPrintUint64(Received_Data.value, HEX);
-            Infrared_Receiver.resume();
-            if (State == POWER_OFF_STATE)
+            if (Received_Data.value == Power_Code)
             {
-                if (Received_Data.value == Power_Code)
-                {
-                    Start();
-                }
+                Shutdown();
             }
-            else
+            else if (Received_Data.value == Volume_Down_Code)
             {
-                if (Received_Data.value == Power_Code)
+                //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
+                Defined_Volume += 255 / VOLUME_STEP;
+                Set_Volume();
+            }
+            else if (Received_Data.value == Volume_Up_Code)
+            {
+                //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
+                Defined_Volume -= 255 / VOLUME_STEP;
+                Set_Volume();
+            }
+            else if (Received_Data.value == State_Code)
+            {
+                if (State != 0 && State < 3)
                 {
-                    Shutdown();
-                    break;
+                    State++;
+                    Set_State(State);
                 }
-                else if (Received_Data.value == Volume_Down_Code)
+                else if (State >= 3)
                 {
-                    //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
-                    Defined_Volume += 255 / VOLUME_STEP;
-                    Set_Volume();
-                    break;
-                }
-                else if (Received_Data.value == Volume_Up_Code)
-                {
-                    //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
-                    Defined_Volume -= 255 / VOLUME_STEP;
-                    Set_Volume();
-                    break;
-                }
-                else if (Received_Data.value == State_Code)
-                {
-                    if (State != 0 && State < 3)
-                    {
-                        State++;
-                    }
-                    else if (State >= 3)
-                    {
-                        State = 1;
-                    }
-                    break;
+                    State = 1;
+                    Set_State(State);
                 }
             }
             Infrared_Receiver.resume();
-        }
-        switch (State)
-        {
-        case POWER_ON_WIFI_STATION:
-            Set_LED_Color(Power_On_WiFi_Station_Color);
-            break;
-        case POWER_ON_WIFI_ACCESS_POINT:
-            Set_LED_Color(Power_On_WiFi_Access_Point_Color);
-            break;
-        case POWER_ON_WIFI_DISABLED:
-            Set_LED_Color(Power_On_WiFi_Disabled_Color);
-        default:
-            break;
         }
     }
 }
@@ -610,7 +696,7 @@ uint8_t Load_Configuration()
         Temporary_File.close();
         Serial.println(SSID);
         Serial.println(Password);
-    }    
+    }
 
     Temporary_File = SPIFFS.open(REMOTE_FILE, FILE_READ);
     if (Temporary_File)
@@ -627,14 +713,13 @@ uint8_t Load_Configuration()
         Serial.println(Volume_Up_Code, HEX);
         Serial.println(Volume_Down_Code, HEX);
         Serial.println(State_Code, HEX);
-
     }
     Temporary_File.close();
 
     Temporary_File = SPIFFS.open(LED_FILE, FILE_READ);
     if (Temporary_File)
     {
-        Temporary_File.seek(0);
+        /*Temporary_File.seek(0);
         Power_Off_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
         Temporary_File.seek(4);
         Power_On_WiFi_Station_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
@@ -642,17 +727,16 @@ uint8_t Load_Configuration()
         Power_On_WiFi_Access_Point_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
         Temporary_File.seek(12);
         Power_On_WiFi_Disabled_Color = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
-        Serial.println(Power_Off_Color, HEX);
+        Serial.println(Power_Off_Color, HEX);*/
         Serial.println(Power_On_WiFi_Station_Color, HEX);
         Serial.println(Power_On_WiFi_Station_Color, HEX);
         Serial.println(Power_On_WiFi_Disabled_Color, HEX);
-    }    
-    
+    }
 
     return true;
 }
 
-uint8_t Save_Configuration(uint8_t const& Parameters_To_Save)
+uint8_t Save_Configuration(uint8_t const &Parameters_To_Save)
 {
     switch (Parameters_To_Save)
     {
