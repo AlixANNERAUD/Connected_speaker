@@ -8,17 +8,17 @@
     appearance: none;
     width: 50%; /* Full-width */
     height: 32px; /* Specified height */
-    background: black; /* Grey background */
+    background: white; /* Grey background */
     outline: none; /* Remove outline */
     opacity: 1; /* Set transparency (for mouse-over effects on hover) */
     -webkit-transition: .2s; /* 0.2 seconds transition on hover */
     transition: opacity .2s;
-    border-color: white;
+    border-radius: 5px;
   }
   
   /* Mouse-over effects */
   .slider:hover {
-    opacity: 1; /* Fully shown on mouse-over */
+    opacity: 0.8; /* Fully shown on mouse-over */
   }
   
   /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
@@ -27,15 +27,15 @@
     appearance: none;
     width: 32px; /* Set a specific slider handle width */
     height: 32px; /* Slider handle height */
-    background:white; /* Green background */
+    background:black; /* Green background */
     cursor: pointer; /* Cursor on hover */
+    border-radius: 5px;
   }
   
   .slider::-moz-range-thumb {
     width: 32px; /* Set a specific slider handle width */
     height: 32px; /* Slider handle height */
-    background: white; /* Green background */
+    background: black; /* Green background */
     cursor: pointer; /* Cursor on hover */
-    border-color: black;
-    border-radius: 0px;
+    border-radius: 5px;
   }

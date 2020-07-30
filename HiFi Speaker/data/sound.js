@@ -1,12 +1,10 @@
-setInterval(function Refresh() {
-    var Request = new XMLHttpRequest();
-    Request.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200)
-        {
-            document.getElementById("Volume_Slider").value = this.value;
-        }
-    };
-    $.post("get", {get_volume});
+setInterval(function Refresh_Volume() {
+
+    $.post("get", {get_volume: 0}, function(data, status, xhr) {
+        document.getElementById("Volume_Slider").value = parseInt(xhr.responseText, 10);
+    }
+    );
+
 }, 500);
 
 function Set_Volume()
@@ -15,22 +13,4 @@ function Set_Volume()
     $.post("get", {
         set_volume: Volume
     });
-}
-
-function Increase_Volume()
-{
-    if (document.getElementById("Volume_Slider").value < 33)
-    {
-        document.getElementById("Volume_Slider").value++;
-    }
-    Set_Volume();
-}
-
-function Reduce_Volume()
-{
-    if (document.getElementById("Volume_Slider").value >= 0)
-    {
-        document.getElementById("Volume_Slider").value--;
-    }
-    Set_Volume();
 }

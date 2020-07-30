@@ -27,7 +27,8 @@ void setup()
         }
         if (Timeout != 0)
         {
-            Shutdown();
+            esp_sleep_enable_ext0_wakeup(GPIO_NUM_15, LOW);
+            esp_deep_sleep_start();
         }
     }
     else if (Wakeup_Reason == ESP_SLEEP_WAKEUP_UNDEFINED)
@@ -39,7 +40,8 @@ void setup()
     else
     {
         Serial.println("Other wakeup reason");
-        Shutdown();
+        esp_sleep_enable_ext0_wakeup(GPIO_NUM_15, LOW);
+        esp_deep_sleep_start();
     }
 }
 
@@ -120,7 +122,6 @@ void Setup_Web_Server()
                 Request->send(204);
                 String Volume_To_Set = Request->getParam("set_volume", true)->value();
                 Defined_Volume = (uint8_t)map(Volume_To_Set.toInt(), 0, VOLUME_STEP, 0, 255);
-                Set_Volume();
             }
             else if (Request->hasParam("set_wifi_ssid", true) && Request->hasParam("set_wifi_password", true))
             {
@@ -232,8 +233,8 @@ void Setup_Web_Server()
     Web_Server.on("/power-off.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
         Request->send(SPIFFS, "/power-off.svg", "");
     });
-    Web_Server.on("/sync-alt.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/sync-alt.js", "text/javascript");
+    Web_Server.on("/sync-alt.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Request->send(SPIFFS, "/sync-alt.svg", "text/javascript");
     });
 
     Web_Server.on("/wifi.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
@@ -293,20 +294,19 @@ void WiFi_Initialize()
         {
             break;
         }
-
     }
     if (WiFi.status() != WL_CONNECTED)
     {
-         Serial.println(F("Create AP"));
-            Set_State(POWER_ON_WIFI_ACCESS_POINT_STATE);
-            WiFi.softAP(Temporary_Device_Name, Temporary_Device_Password);
+        Serial.println(F("Create AP"));
+        Set_State(POWER_ON_WIFI_ACCESS_POINT_STATE);
+        WiFi.softAP(Temporary_Device_Name, Temporary_Device_Password);
     }
     else
     {
         Serial.println(F("Connected"));
         Set_State(POWER_ON_WIFI_STATION_STATE);
     }
-    
+
     if (!MDNS.begin(Temporary_Device_Name))
     {
         Serial.println("Error setting up MDNS responder!");
@@ -330,7 +330,7 @@ void Start()
     ledcWrite(1, 255);
     ledcWrite(2, 255);
 
-    xTaskCreatePinnedToCore(LED_Task, "LED", 2 * 1024, NULL, 2, &LED_Handle, 0);
+    xTaskCreatePinnedToCore(LED_Task, "LED", 2 * 1024, NULL, 2, &LED_Handle, 1);
 
     Set_State(POWER_ON_START);
 
@@ -391,10 +391,9 @@ void Start()
     // Setup Web Server
 
     xTaskCreatePinnedToCore(Infrared_Receiver_Task, "CIR", 6 * 1024, NULL, 2, &Infrared_Receiver_Handle, 1);
-    
 }
 
-void Set_State(uint8_t const& State_To_Set)
+void Set_State(uint8_t const &State_To_Set)
 {
     State = State_To_Set;
     switch (State)
@@ -534,6 +533,8 @@ void Set_LED_Color(uint32_t Color_To_Set)
 void Infrared_Receiver_Task(void *pvParameters)
 {
     (void)pvParameters;
+    uint8_t Current_Volume;
+    uint8_t Delta;
     while (1)
     {
         if (Infrared_Receiver.decode(&Received_Data))
@@ -547,14 +548,19 @@ void Infrared_Receiver_Task(void *pvParameters)
             else if (Received_Data.value == Volume_Down_Code)
             {
                 //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
-                Defined_Volume += 255 / VOLUME_STEP;
-                Set_Volume();
+                if (Defined_Volume >= (0 + 255 / VOLUME_STEP))
+                {
+                    Defined_Volume -= 255 / VOLUME_STEP;
+                }
             }
             else if (Received_Data.value == Volume_Up_Code)
             {
                 //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
-                Defined_Volume -= 255 / VOLUME_STEP;
-                Set_Volume();
+                if (Defined_Volume <= (255 - 255 / VOLUME_STEP))
+                {
+                    Defined_Volume += 255 / VOLUME_STEP;
+                }
+                
             }
             else if (Received_Data.value == State_Code)
             {
@@ -569,37 +575,43 @@ void Infrared_Receiver_Task(void *pvParameters)
                     Set_State(State);
                 }
             }
+
             Infrared_Receiver.resume();
         }
-    }
-}
 
-void Set_Volume()
-{
-    static uint8_t Current_Volume;
-
-    Serial.print(F("Set volume to :"));
-    Serial.println(Defined_Volume);
-
-    Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
-
-    while (Current_Volume != Defined_Volume)
-    {
-        if (Current_Volume > Defined_Volume)
-        {
-            digitalWrite(DOWN_PIN, HIGH);
-            digitalWrite(UP_PIN, LOW);
-        }
-        else if (Current_Volume < Defined_Volume)
-        {
-            digitalWrite(DOWN_PIN, LOW);
-            digitalWrite(UP_PIN, HIGH);
-        }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        // Set volume
         Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
+        Delta = sqrt(sq(Current_Volume - Defined_Volume));
+
+        while (Delta > 255 / VOLUME_STEP * 2)
+        {
+            Serial.println(F("Delta:"));
+            Serial.println(Delta);
+            while (Current_Volume > Defined_Volume)
+            {
+                digitalWrite(DOWN_PIN, HIGH);
+                digitalWrite(UP_PIN, LOW);
+                vTaskDelay(pdMS_TO_TICKS(10));
+                Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
+            }
+        
+
+            while (Current_Volume < Defined_Volume)
+            {
+                digitalWrite(DOWN_PIN, LOW);
+                digitalWrite(UP_PIN, HIGH);
+                vTaskDelay(pdMS_TO_TICKS(10));
+                Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(50));
+
+            Delta = sqrt(sq(Current_Volume - Defined_Volume));
+            
+        }
+        digitalWrite(DOWN_PIN, LOW);
+        digitalWrite(UP_PIN, LOW);
     }
-    digitalWrite(DOWN_PIN, LOW);
-    digitalWrite(UP_PIN, LOW);
 }
 
 uint8_t Load_Configuration()

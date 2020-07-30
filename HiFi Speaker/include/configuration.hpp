@@ -5,8 +5,8 @@
 #define POTENTIOMETER_PIN 33
 
 #define GREEN_LED_PIN 32
-#define RED_LED_PIN 14
-#define BLUE_LED_PIN 21
+#define RED_LED_PIN 21
+#define BLUE_LED_PIN 14
 
 #define UP_PIN 16
 #define DOWN_PIN 17
@@ -17,7 +17,7 @@
 
 // Volume
 
-#define VOLUME_STEP 32
+#define VOLUME_STEP 15
 //
 
 #define IR_THRESHOLD 255

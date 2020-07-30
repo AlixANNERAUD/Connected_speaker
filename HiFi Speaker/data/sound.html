@@ -70,14 +70,14 @@
 
         <!--Header-->
         <header class="w3-container w3-black w3-theme w3-padding w3-center">
-            <h1 class="w3-jumbo w3-padding-16">Hi-Fi System</h1>
+            <h1 class="w3-jumbo w3-padding-16" id="Header_Title">Hi-Fi System</h1>
         </header>
     </div>
 
     <div class="w3-main" style="margin-left:310px; margin-right: 10px;">
         <div class="w3-card w3-container w3-padding-large w3-section w3-black">
             <h1 class="w3-xxxlarge w3-center w3-padding-large">
-                <img src="images/music.svg" height="40px" />
+                <img src="/music.svg" height="40px" />
                 Sound
             </h1>
 
@@ -87,12 +87,7 @@
 
 
             <div class="slidecontainer w3-center w3-theme w3-padding">
-                <button onclick="Reduce_Volume()" class="w3-button w3-white w3-small w3-ripple"
-                    style="width:32px; height: 32px">-</button>
-                <input type="range" min="0" max="31" value="0" class="slider w3-padding-16" id="Volume_Slider" onclick="Set_Volume()">
-
-                <button onclick="Increase_Volume()" class="w3-button w3-white w3-large w3-ripple"
-                    style="width:32px; height: 32px">+</button>
+                <input type="range" min="0" max="15" class="slider w3-padding-16" id="Volume_Slider" onchange="Set_Volume()">
 
             </div>
 
