@@ -364,6 +364,24 @@ void Start()
 
     WiFi_Initialize();
 
+    // Initialize OTA
+
+    ArduinoOTA.onStart([]() {
+        uint8_t Update_Type;
+        if (ArduinoOTA.getCommand() == U_FLASH)
+        {
+            Update_Type = 'C'; //code
+        }
+        else
+        {
+            Update_Type = 'F'; //filesystem
+            SPIFFS.end();
+        }
+    });
+
+    ArduinoOTA.begin();
+
+
     //
 
     Setup_Web_Server();
@@ -583,7 +601,7 @@ void Infrared_Receiver_Task(void *pvParameters)
         Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
         Delta = sqrt(sq(Current_Volume - Defined_Volume));
 
-        while (Delta > 255 / VOLUME_STEP * 2)
+        while (Delta > 255 / (VOLUME_STEP + 1))
         {
             Serial.println(F("Delta:"));
             Serial.println(Delta);
@@ -605,13 +623,13 @@ void Infrared_Receiver_Task(void *pvParameters)
             }
 
             vTaskDelay(pdMS_TO_TICKS(50));
-
             Delta = sqrt(sq(Current_Volume - Defined_Volume));
-            
         }
         digitalWrite(DOWN_PIN, LOW);
         digitalWrite(UP_PIN, LOW);
     }
+
+    ArduinoOTA.handle();
 }
 
 uint8_t Load_Configuration()

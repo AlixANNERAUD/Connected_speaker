@@ -7,6 +7,8 @@
 #include <IRrecv.h>
 #include <IRutils.h>
 
+#include "ArduinoOTA.h"
+
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
