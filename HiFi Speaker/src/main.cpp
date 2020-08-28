@@ -375,6 +375,7 @@ void Start()
         else
         {
             Update_Type = 'F'; //filesystem
+            Web_Server.end();
             SPIFFS.end();
         }
     });
@@ -601,10 +602,18 @@ void Infrared_Receiver_Task(void *pvParameters)
         Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
         Delta = sqrt(sq(Current_Volume - Defined_Volume));
 
-        while (Delta > 255 / (VOLUME_STEP + 1))
+        while (Delta > 255 / VOLUME_STEP)
         {
             Serial.println(F("Delta:"));
             Serial.println(Delta);
+            if (Defined_Volume)
+            {
+                digitalWrite(POWER_PIN, LOW);
+            }
+            else
+            {
+                digitalWrite(POWER_PIN, HIGH);
+            }
             while (Current_Volume > Defined_Volume)
             {
                 digitalWrite(DOWN_PIN, HIGH);
@@ -627,9 +636,8 @@ void Infrared_Receiver_Task(void *pvParameters)
         }
         digitalWrite(DOWN_PIN, LOW);
         digitalWrite(UP_PIN, LOW);
-    }
-
     ArduinoOTA.handle();
+    }
 }
 
 uint8_t Load_Configuration()
