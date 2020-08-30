@@ -15,6 +15,16 @@ function Login()
     var Password = $("#password_input").val();
     $.post("get", {
         password: Password
+    }, function (data, status, xhr) {
+        if (xhr.responseText = 'true')
+        {
+            document.getElementById('Modal').style.display='block';
+        }
+        else
+        {
+            document.location.href="\sound.html";
+        }
+        document.getElementById("Volume_Slider").value = parseInt(xhr.responseText, 10);
     });
 }
 

@@ -12,6 +12,7 @@
 
 <body class="w3-black w3-animate-opacity">
 
+
     <div class="w3-border-bottom w3-main" style="margin-left:10px; margin-right: 10px;">
         <!--Header-->
         <header class="w3-container w3-black w3-theme w3-padding w3-center">
@@ -19,7 +20,10 @@
         </header>
     </div>
 
+
+
     <div class="w3-main" style="margin-left:10px; margin-right: 10px;">
+    
 
 
 
@@ -33,12 +37,18 @@
                 <input class="w3-input w3-round-large" type="password" required id="password_input">
                 <label>Password</label>
             </p>
+            
 
+            <div id="Modal" class="w3-modal w3-modal-content w3-center w3-black w3-large">
+                <p>Wrong credentials !</p>
+            </div>
 
             <div class="w3-center w3-theme w3-padding">
                 <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large" onclick="Login()">Login</button>
             </div>
         </div>
+
+
 
         <!--Footer-->
         <footer class="w3-container w3-bottom w3-padding-large w3-black w3-center w3-border-top">

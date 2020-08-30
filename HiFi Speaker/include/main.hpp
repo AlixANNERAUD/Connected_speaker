@@ -37,6 +37,8 @@ decode_results Received_Data;
 
 AsyncWebServer Web_Server(80);
 
+bool Logged = 1;
+
 File Temporary_File;
 
 // Configuration variable
@@ -61,13 +63,15 @@ uint32_t Power_On_WiFi_Access_Point_Color = POWER_ON_WIFI_ACCESS_POINT_COLOR; //
 uint32_t Power_On_WiFi_Disabled_Color = POWER_ON_WIFI_DISABLED_COLOR; //yellow
 //uint32_t Power_Off_Error_Color = POWER_ON_ERROR_COLOR;
 
-uint32_t Power_Code = 0xE0E0F00F;
-uint32_t Volume_Down_Code = 0xE0E0D02F;
-uint32_t Volume_Up_Code = 0xE0E0E01F;
-uint32_t State_Code = 0xE0E0E01F;
+uint32_t Power_Code[2] = {0xE0E0F00F, 0xCF000EF1};
+uint32_t Volume_Down_Code[2] = {0xE0E0D02F, 0xCF001EE1};
+uint32_t Volume_Up_Code[2] = {0xE0E0E01F, 0xCF00EE11};
+uint32_t Mute_Code[2] = {0xCF008E71, 0x000000000};
+uint32_t State_Code[2] = {0xE0E0E01F, 0xCF00B946};
 
+IPAddress Logged_Client;
 
-bool Logged;
+bool Mute;
 
 void Start();
 void Shutdown();
@@ -79,7 +83,9 @@ void Set_State(uint8_t const&);
 // Task
 void Infrared_Receiver_Task(void*);
 uint8_t Load_Configuration();
-uint8_t Save_Configuration();
+uint8_t Save_Configuration(uint8_t const&);
+
+//bool Logged();
 
 void WiFi_Initialize();
 void Setup_Web_Server();

@@ -1,16 +1,16 @@
 setInterval(function Refresh_Volume() {
-
-    $.post("get", {get_volume: 0}, function(data, status, xhr) {
-        document.getElementById("Volume_Slider").value = parseInt(xhr.responseText, 10);
-    }
-    );
-
+    $.post("get", {volume: 0}, function(data, status, xhr) {
+        var Volume = parseInt(xhr.responseText, 10);
+        document.getElementById("Volume_Slider").value = Volume;
+        document.getElementById("Volume_Label").innerHTML = Math.round(document.getElementById("Volume_Slider").value / 16 * 100) + ' %';
+    });
 }, 500);
 
 function Set_Volume()
 {
     var Volume = document.getElementById("Volume_Slider").value;
-    $.post("get", {
-        set_volume: Volume
+    $.post("set", {
+        volume: Volume
     });
+    document.getElementById("Volume_Label").innerHTML = Math.round(document.getElementById("Volume_Slider").value / 16 * 100) + ' %';
 }

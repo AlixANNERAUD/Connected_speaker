@@ -16,8 +16,9 @@ void setup()
         {
             if (Infrared_Receiver.decode(&Received_Data))
             {
-                if (Received_Data.value == Power_Code || Received_Data.value == Volume_Up_Code || Received_Data.value == Volume_Down_Code || Received_Data.value == State_Code)
+                if (Received_Data.value == Power_Code[0] || Received_Data.value == Power_Code[1] || Received_Data.value == Volume_Up_Code[0] || Received_Data.value == Volume_Up_Code[1] || Received_Data.value == Volume_Down_Code[0] || Received_Data.value == Volume_Down_Code[1] || Received_Data.value == State_Code[0] || Received_Data.value == State_Code[1])
                 {
+                    Infrared_Receiver.disableIRIn();
                     Start();
                     Timeout = 0;
                 }
@@ -55,85 +56,137 @@ void Setup_Web_Server()
 
     Serial.println(F("Setup Web Server"));
 
-    Web_Server.on("/get", HTTP_POST, [](AsyncWebServerRequest *Request) {
-        if (!Logged)
+    Web_Server.on("/set", HTTP_POST, [](AsyncWebServerRequest *Request) {
+        Serial.print(F("/set :"));
+        if (Logged)
         {
-
-            if (Request->hasParam("password", true))
+            if (Request->hasParam("volume", true))
             {
+                Serial.println(F("volume"));
                 Request->send(204);
-                Serial.print("Received passord :");
-                String Password_To_Check = Request->getParam("password", true)->value();
-                Serial.println(Password_To_Check);
-                if (Password_To_Check == Device_Password)
-                {
-                    Serial.println("Good password !");
-                    Logged = true;
-                    Request->redirect("/volume");
-                }
-                else
-                {
-                    Serial.println("Wrong password !");
-                    Logged = false;
-                }
+                String Volume_To_Set = Request->getParam("volume", true)->value();
+                Defined_Volume = (uint8_t)map(Volume_To_Set.toInt(), 0, VOLUME_STEP, 0, 255);
             }
-            else
+            else if (Request->hasParam("device_name"))
             {
-                Request->redirect("/login");
+                Serial.println(F("device name"));
+                Device_Name = Request->getParam("device_name", true)->value();
+                Save_Configuration(1);
             }
-        }
-        else
-        {
-            if (Request->hasParam("set-code", true))
+            else if (Request->hasParam("device_password"))
             {
+                Serial.println(F("device passwd"));
+                Device_Password = Request->getParam("device_password", true)->value();
+                Save_Configuration(1);
+            }
+            else if (Request->hasParam("wifi_ssid", true))
+            {
+                Serial.println(F("wifi ssid"));
+                SSID = Request->getParam("wifi_ssid", true)->value();
+                Password = Request->getParam("wifi_password", true)->value();
+                Save_Configuration(2);
+                ESP.restart();
+            }
+            else if (Request->hasParam("code", true))
+            {
+                Serial.println(F("code"));
                 vTaskSuspend(Infrared_Receiver_Handle);
                 while (!Infrared_Receiver.decode(&Received_Data))
                 {
                     vTaskDelay(pdMS_TO_TICKS(50));
                 }
-
-                if (Request->getParam("set-code", true)->value() == "mute")
+                if (Request->getParam("code", true)->value() == "power-0")
                 {
-
-                    Power_Code = Received_Data.value;
+                    Power_Code[0] = Received_Data.value;
                 }
-                else if (Request->getParam("set-code", true)->value() == "volume-up")
+                else if (Request->getParam("code", true)->value() == "power-1")
                 {
-
-                    Volume_Up_Code = Received_Data.value;
+                    Power_Code[1] = Received_Data.value;
                 }
-                else if (Request->getParam("set-code", true)->value() == "volume-down")
+                else if (Request->getParam("code", true)->value() == "volume-up-0")
                 {
-                    Volume_Down_Code = Received_Data.value;
+                    Volume_Up_Code[0] = Received_Data.value;
                 }
-                else if (Request->getParam("set-code", true)->value() == "wifi-switch")
+                else if (Request->getParam("code", true)->value() == "volume-up-1")
                 {
-                    Volume_Up_Code = Received_Data.value;
+                    Volume_Up_Code[1] = Received_Data.value;
+                }
+                else if (Request->getParam("code", true)->value() == "volume-down-0")
+                {
+                    Volume_Down_Code[0] = Received_Data.value;
+                }
+                else if (Request->getParam("code", true)->value() == "volume-down-1")
+                {
+                    Volume_Down_Code[1] = Received_Data.value;
+                }
+                else if (Request->getParam("code", true)->value() == "state-0")
+                {
+                    State_Code[0] = Received_Data.value;
+                }
+                else if (Request->getParam("code", true)->value() == "state-1")
+                {
+                    State_Code[1] = Received_Data.value;
                 }
                 Infrared_Receiver.resume();
                 vTaskResume(Infrared_Receiver_Handle);
             }
-            else if (Request->hasParam("get_volume", true))
+        }
+        else
+        {
+            Request->redirect("/login");
+        }
+    });
+
+    Web_Server.on("/get", HTTP_POST, [](AsyncWebServerRequest *Request) {
+        Serial.print(F("/get :"));
+ 
+        if (Request->hasParam("device_name", true))
+        {
+            Serial.println(F("device name"));
+            Request->send(200, "text/plain", Device_Name); 
+        }
+        else
+        {
+            if (!Logged)
             {
-                Request->send(200, "text/plain", String(map(Defined_Volume, 0, 255, 0, VOLUME_STEP)));
+                if (Request->hasParam("password", true))
+                {
+                    Serial.println(F("password"));
+                    Serial.print("Received passord :");
+                    String Password_To_Check = Request->getParam("password", true)->value();
+                    Serial.println(Password_To_Check);
+                    if (Password_To_Check == Device_Password)
+                    {
+                        Serial.println("Good password !");
+                        Logged_Client = Request->client()->remoteIP();
+                        Request->send(200, "text/plain", "true");
+                    }
+                    else
+                    {
+                        Request->send(204);
+                    }
+                }
+                else
+                {
+                    Request->redirect("/login");
+                }
             }
-            else if (Request->hasParam("set_volume", true))
+            else
             {
-                Request->send(204);
-                String Volume_To_Set = Request->getParam("set_volume", true)->value();
-                Defined_Volume = (uint8_t)map(Volume_To_Set.toInt(), 0, VOLUME_STEP, 0, 255);
-            }
-            else if (Request->hasParam("set_wifi_ssid", true) && Request->hasParam("set_wifi_password", true))
-            {
-                Request->send(204);
-                SSID = Request->getParam("set_wifi_ssid", true)->value();
-                Password = Request->getParam("set_wifi_password", true)->value();
-                WiFi_Initialize();
+
+                if (Request->hasParam("volume", true))
+                {
+                    Serial.println(F("volume"));
+                    Request->send(200, "text/plain", String(map(Defined_Volume, 0, 255, 0, VOLUME_STEP)));
+                }
+
+
             }
         }
     });
 
     Web_Server.on("/", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("/"));
         if (Logged)
         {
             Request->redirect("/sound");
@@ -145,17 +198,19 @@ void Setup_Web_Server()
     });
 
     Web_Server.on("/login", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        if (Logged)
+        Serial.println(F("/login"));
+        /*if (Logged)
         {
-            Request->redirect("/sound");
+            Request->redirect("/login");
         }
         else
-        {
+        {*/
             Request->send(SPIFFS, "/login.html", "text/html");
-        }
+        //}
     });
 
     Web_Server.on("/sound", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("/sound"));
         if (Logged)
         {
 
@@ -168,6 +223,7 @@ void Setup_Web_Server()
     });
 
     Web_Server.on("/update", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("/update"));
         if (Logged)
         {
             Request->send(SPIFFS, "/update.html", "text/html");
@@ -179,6 +235,7 @@ void Setup_Web_Server()
     });
 
     Web_Server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("/wifi"));
         if (Logged)
         {
             Request->send(SPIFFS, "/wifi.html", "text/html");
@@ -190,6 +247,7 @@ void Setup_Web_Server()
     });
 
     Web_Server.on("/remote", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("/remote"));
         if (Logged)
         {
             Request->send(SPIFFS, "/remote.html");
@@ -203,69 +261,112 @@ void Setup_Web_Server()
     // Images
 
     Web_Server.on("/lock.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        
+        Serial.println(F("lock.svg"));
         Request->send(SPIFFS, "/lock.svg");
+        
     });
 
     Web_Server.on("/bars.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/bars.svg", "");
+        Serial.println(F("bars.svg"));
+        Request->send(SPIFFS, "/bars.svg");
+        
     });
     Web_Server.on("/bluetooth-b.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/bluetooth-b.svg", "");
+        Serial.println(F("bt.svg"));
+        Request->send(SPIFFS, "/bluetooth-b.svg");
+        
     });
     Web_Server.on("/fast-backward.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/fast_backward.svg", "");
+        Serial.println(F("fast back.svg"));
+        Request->send(SPIFFS, "/fast_backward.svg");
+        
     });
     Web_Server.on("/lightbulb.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/lightbulb.svg", "");
+        Request->send(SPIFFS, "/lightbulb.svg");
+        Serial.println(F("lightbulb.svg"));
     });
     Web_Server.on("/link.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/link.svg", "");
+        Serial.println(F("link.svg"));
+        Request->send(SPIFFS, "/link.svg");
+        
     });
     Web_Server.on("/microchip.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/microchip.svg", "");
+        Serial.println(F("microchip.svg"));
+        Request->send(SPIFFS, "/microchip.svg");
+        
     });
     Web_Server.on("/music.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/music.svg", "");
+        Serial.println(F("music.svg"));
+        Request->send(SPIFFS, "/music.svg");
+        
     });
     Web_Server.on("/plus.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/plus.svg", "");
+        Serial.println(F("plus.svg"));
+        Request->send(SPIFFS, "/plus.svg");
+        
     });
     Web_Server.on("/power-off.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/power-off.svg", "");
+        Serial.println(F("power.svg"));
+        Request->send(SPIFFS, "/power-off.svg");
+        
     });
     Web_Server.on("/sync-alt.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
-        Request->send(SPIFFS, "/sync-alt.svg", "text/javascript");
+        Serial.println(F("sync.svg"));
+        Request->send(SPIFFS, "/sync-alt.svg");
+        
     });
 
     Web_Server.on("/wifi.svg", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        
+        Serial.println(F("wifi.svg"));
         Request->send(SPIFFS, "/wifi.svg");
+        
     });
 
     //Script
 
     Web_Server.on("/common.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("com.js"));
         Request->send(SPIFFS, "/common.js", "text/javascript");
+        
     });
-
     Web_Server.on("/sound.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("sound.js"));
         Request->send(SPIFFS, "/sound.js", "text/javascript");
+        
     });
-
     Web_Server.on("/login.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("login.js"));
         Request->send(SPIFFS, "/login.js", "text/javascript");
+        
+    });
+    Web_Server.on("/remote.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("remote.js"));
+        Request->send(SPIFFS, "/remote.js", "text/javascript");
+        
+    });
+    Web_Server.on("/led.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("led.js"));
+        Request->send(SPIFFS, "/led.js", "text/javascript");
+        
+       
     });
 
     Web_Server.on("/jquery-3.5.1.min.js", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("jq.js"));
         Request->send(SPIFFS, "/jquery-3.5.1.min.js", "text/javascript");
     });
 
     // Style sheet
 
-    Web_Server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *Request) {
+    /*Web_Server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("style.css"));
         Request->send(SPIFFS, "/style.css", "text/css");
-    });
+    });*/
 
     Web_Server.on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *Request) {
+        Serial.println(F("W3.css"));
         Request->send(SPIFFS, "/w3.css", "text/css");
     });
 
@@ -381,7 +482,6 @@ void Start()
     });
 
     ArduinoOTA.begin();
-
 
     //
 
@@ -554,17 +654,18 @@ void Infrared_Receiver_Task(void *pvParameters)
     (void)pvParameters;
     uint8_t Current_Volume;
     uint8_t Delta;
+    Infrared_Receiver.enableIRIn();
     while (1)
     {
         if (Infrared_Receiver.decode(&Received_Data))
         {
             Serial.print(F("IR :"));
             serialPrintUint64(Received_Data.value, HEX);
-            if (Received_Data.value == Power_Code)
+            if (Received_Data.value == Power_Code[0] || Received_Data.value == Power_Code[1])
             {
                 Shutdown();
             }
-            else if (Received_Data.value == Volume_Down_Code)
+            else if (Received_Data.value == Volume_Down_Code[0] || Received_Data.value == Volume_Down_Code[1])
             {
                 //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
                 if (Defined_Volume >= (0 + 255 / VOLUME_STEP))
@@ -572,16 +673,15 @@ void Infrared_Receiver_Task(void *pvParameters)
                     Defined_Volume -= 255 / VOLUME_STEP;
                 }
             }
-            else if (Received_Data.value == Volume_Up_Code)
+            else if (Received_Data.value == Volume_Up_Code[0] || Received_Data.value == Volume_Up_Code[1])
             {
                 //Set_LED_Color(255 - Defined_Volume, Defined_Volume, 0);
                 if (Defined_Volume <= (255 - 255 / VOLUME_STEP))
                 {
                     Defined_Volume += 255 / VOLUME_STEP;
                 }
-                
             }
-            else if (Received_Data.value == State_Code)
+            else if (Received_Data.value == State_Code[0] || Received_Data.value == Volume_Up_Code[1])
             {
                 if (State != 0 && State < 3)
                 {
@@ -606,7 +706,8 @@ void Infrared_Receiver_Task(void *pvParameters)
         {
             Serial.println(F("Delta:"));
             Serial.println(Delta);
-            if (Defined_Volume)
+
+            if (Defined_Volume < VOLUME_STEP)
             {
                 digitalWrite(POWER_PIN, LOW);
             }
@@ -614,16 +715,16 @@ void Infrared_Receiver_Task(void *pvParameters)
             {
                 digitalWrite(POWER_PIN, HIGH);
             }
-            while (Current_Volume > Defined_Volume)
+
+            while (Current_Volume >= Defined_Volume)
             {
                 digitalWrite(DOWN_PIN, HIGH);
                 digitalWrite(UP_PIN, LOW);
                 vTaskDelay(pdMS_TO_TICKS(10));
                 Current_Volume = 255 - map(analogRead(POTENTIOMETER_PIN), 0, 4095, 0, 255);
             }
-        
 
-            while (Current_Volume < Defined_Volume)
+            while (Current_Volume <= Defined_Volume)
             {
                 digitalWrite(DOWN_PIN, LOW);
                 digitalWrite(UP_PIN, HIGH);
@@ -636,7 +737,10 @@ void Infrared_Receiver_Task(void *pvParameters)
         }
         digitalWrite(DOWN_PIN, LOW);
         digitalWrite(UP_PIN, LOW);
-    ArduinoOTA.handle();
+
+        // Handle OTA
+        ArduinoOTA.handle();
+
     }
 }
 
@@ -736,21 +840,34 @@ uint8_t Load_Configuration()
         Serial.println(Password);
     }
 
+    // Remote
     Temporary_File = SPIFFS.open(REMOTE_FILE, FILE_READ);
     if (Temporary_File)
     {
         Temporary_File.seek(0);
-        Power_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Power_Code[0] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
         Temporary_File.seek(4);
-        Volume_Up_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Power_Code[1] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
         Temporary_File.seek(8);
-        Volume_Down_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Volume_Up_Code[0] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
         Temporary_File.seek(12);
-        State_Code = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
-        Serial.println(Power_Code, HEX);
-        Serial.println(Volume_Up_Code, HEX);
-        Serial.println(Volume_Down_Code, HEX);
-        Serial.println(State_Code, HEX);
+        Volume_Up_Code[1] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(16);
+        Volume_Down_Code[0] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(20);
+        Volume_Down_Code[1] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(24);
+        State_Code[0] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Temporary_File.seek(28);
+        State_Code[1] = ((uint32_t)Temporary_File.read() << 24) | ((uint32_t)Temporary_File.read() << 16) | ((uint32_t)Temporary_File.read() << 8) | (uint32_t)Temporary_File.read();
+        Serial.println(Power_Code[0], HEX);
+        Serial.println(Volume_Up_Code[0], HEX);
+        Serial.println(Volume_Down_Code[0], HEX);
+        Serial.println(State_Code[0], HEX);
+        Serial.println(Power_Code[1], HEX);
+        Serial.println(Volume_Up_Code[1], HEX);
+        Serial.println(Volume_Down_Code[1], HEX);
+        Serial.println(State_Code[1], HEX);
     }
     Temporary_File.close();
 
@@ -774,7 +891,7 @@ uint8_t Load_Configuration()
     return true;
 }
 
-uint8_t Save_Configuration(uint8_t const &Parameters_To_Save)
+uint8_t Save_Configuration(uint8_t const& Parameters_To_Save)
 {
     switch (Parameters_To_Save)
     {
@@ -798,10 +915,14 @@ uint8_t Save_Configuration(uint8_t const &Parameters_To_Save)
         Temporary_File.close();
     case 3: // IR code
         Temporary_File = SPIFFS.open(REMOTE_FILE, FILE_WRITE);
-        Temporary_File.print(Power_Code);
-        Temporary_File.print(Volume_Up_Code);
-        Temporary_File.print(Volume_Down_Code);
-        Temporary_File.print(State_Code);
+        Temporary_File.print(Power_Code[0]);
+        Temporary_File.print(Power_Code[1]);
+        Temporary_File.print(Volume_Up_Code[0]);
+        Temporary_File.print(Volume_Up_Code[1]);
+        Temporary_File.print(Volume_Down_Code[0]);
+        Temporary_File.print(Volume_Down_Code[1]);
+        Temporary_File.print(State_Code[0]);
+        Temporary_File.print(State_Code[1]);
         Temporary_File.close();
     case 4: // LED color
         Temporary_File = SPIFFS.open(LED_FILE, FILE_WRITE);

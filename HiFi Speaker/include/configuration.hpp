@@ -17,7 +17,7 @@
 
 // Volume
 
-#define VOLUME_STEP 15
+#define VOLUME_STEP 16
 //
 
 #define IR_THRESHOLD 255
