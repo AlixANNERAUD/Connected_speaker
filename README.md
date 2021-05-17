@@ -1,1 +1,1 @@
-# All-In-One-HiFi-Speaker
+# Intelligent Hi-Fi

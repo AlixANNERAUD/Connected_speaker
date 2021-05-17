@@ -1,0 +1,178 @@
+#include <Arduino.h>
+#include <IRremote.h>
+#include <WiFi.h>
+#include <SPIFFS.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPDNS.h>
+#include <Update.h>
+
+#define WIFI_TIMEOUT 10000
+
+#define IR_RECEIVER_THRESOLD 40
+
+#define MUTE_CODE 0xE0E0F00F
+#define VOLUME_DOWN_CODE 0xE0E0D02F
+#define VOLUME_UP_CODE 0xE0E0E01F
+#define A_CODE 0xE0E036C9
+
+
+
+IRrecv IR_Receiver(RECEIVER_PIN);
+
+decode_results Received_Data;
+
+uint8_t Volume = 50;
+uint16_t Timer;
+uint8_t Wireless_Mode;
+
+char *Device_Name = "HiFi Audio System";
+
+char *SSID = "Avrupa";
+char *Password = "0749230994";
+
+WebServer Web_Server(80);
+
+void Shutdown()
+{
+}
+
+void State(uint8_t const &Current_State)
+{
+  //fade LED while starting
+
+  //blue : normal state in station
+
+  //green : wifi station mode
+
+  //yellow : wireless disabled
+
+  //red :
+
+  //use fade to set volume
+}
+
+void setup()
+{
+
+  /*esp_sleep_enable_ext0_wakeup(GPIO_NUM_15, HIGH);
+  esp_sleep_enable_touchpad_wakeup();
+  esp_sleep_wakeup_cause_t Wakeup_Reason = esp_sleep_get_wakeup_cause();
+  if (Wakeup_Reason != ESP_SLEEP_WAKEUP_EXT0)
+  {
+    esp_deep_sleep_start();
+  }*/
+  Serial.begin(9600);
+  // Initialize IR Receiver
+  IR_Receiver.enableIRIn(); // Start the receiver
+  //
+  setCpuFrequencyMhz(80);
+  // Initialize WiFi
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(SSID, Password);
+  unsigned long Attempt_Time = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - Attempt_Time < WIFI_TIMEOUT)
+  {
+    delay(10);
+  }
+  if (WiFi.status != WL_CONNECTED)
+    ;
+  {
+  }
+  if (!MDNS.begin(Device_Name))
+  {
+    Serial.println(F("Error setting up MDNS responder"));
+  }
+  Web_Server.on("/update", HTTP_POST, []()
+  {
+    Web_Server.sendHeader("Connection", "close");
+    Web_Server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+    ESP.restart();
+  }, []() {
+    HTTPUpload &Upload = Web_Server.upload();
+    if (Upload.status == UPLOAD_FILE_START)
+    {
+      Serial.println("Update: %s\n", Upload.filename.c_str());
+
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN))
+      { //start with max available size
+        Update.printError(Serial);
+      }
+    }
+    else if (Upload.status == UPLOAD_FILE_WRITE)
+    {
+      if (Update.write(Upload.buf, Upload.currentSize) != Upload.currentSize)
+      {
+        Update.printError(Serial);
+      }
+    }
+    else if (Upload.status == UPLOAD_FILE_END)
+    {
+      if (Update.end(true))
+      { //true to set the size to the current progress
+        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+      }
+      else
+      {
+        Update.printError(Serial);
+      }
+    }
+  });
+
+  if (!SPIFFS.begin(true))
+  {
+    Serial.println("Error has occured while mounting SPIFFS");
+  }
+
+  /*if (!IR_Receiver.decode(&Received_Data) || Received_Data.value != MUTE_CODE)
+  {
+    esp_deep_sleep_start();
+  }*/
+}
+
+void loop()
+{
+  if (IR_Receiver.decode(&Received_Data))
+  {
+    if (Received_Data.value == MUTE_CODE)
+    {
+      Serial.println(F("Shutdown"));
+      esp_deep_sleep_start();
+    }
+    else if (Received_Data.value == VOLUME_DOWN_CODE)
+    {
+      Serial.println(F("Volume Down"));
+    }
+    else if (Received_Data.value == VOLUME_UP_CODE)
+    {
+      Serial.println(F("Volume Up"));
+    }
+    else if (Received_Data.value == A_CODE)
+    {
+      Wireless_Mode++;
+      switch (Wireless_Mode)
+      {
+      case 0: //Wireless Off
+        WiFi.mode(WIFI_OFF);
+        btStop();
+        break;
+      case 1: //Wifi Station
+        WiFi.mode(WIFI_STA);
+        btStart();
+      default:
+        if (Wireless_Mode > 3)
+        {
+          Wireless_Mode == 0;
+        }
+        break;
+      }
+      Serial.println(F("Switch Wireless mode"));
+    }
+    else
+    {
+      Serial.println(F("Unknow code"));
+    }
+    IR_Receiver.resume();
+  }
+}
