@@ -1,0 +1,36 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "Code",
+			"path": "Remote\\Code"
+		},
+		{
+			"name": "Speaker",
+			"path": "Speaker"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.XRF": "json",
+			"functional": "cpp",
+			"system_error": "cpp",
+			"array": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"utility": "cpp",
+			"deque": "cpp",
+			"string": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"vector": "cpp",
+			"initializer_list": "cpp",
+			"regex": "cpp",
+			"random": "cpp",
+			"limits": "cpp",
+			"cmath": "cpp"
+		}
+	}
+}

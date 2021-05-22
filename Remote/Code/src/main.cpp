@@ -1,4 +1,5 @@
 #include "Xila.hpp"
+#include "Software/Smart_HiFi.hpp"
 
 void setup()
 {
@@ -14,8 +15,9 @@ void setup()
     extern Software_Handle_Class Simon_Handle;
     extern Software_Handle_Class Text_Editor_Handle;
     extern Software_Handle_Class Tiny_Basic_Handle;
+    extern Software_Handle_Class Smart_Hi_Fi_Handle;
 
-    Software_Handle_Class *Custom_Software_Package[12] =
+    Software_Handle_Class *Custom_Software_Package[13] =
         {
             &Calculator_Handle,
             &Clock_Handle,
@@ -28,12 +30,14 @@ void setup()
             &Pong_Handle,
             &Simon_Handle,
             &Text_Editor_Handle,
-            &Tiny_Basic_Handle};
+            &Tiny_Basic_Handle,
+            &Smart_Hi_Fi_Handle};
 
-    Xila.System.Start(Custom_Software_Package, 12);
+    Xila.System.Start(Custom_Software_Package, 13);
 }
 
 void loop()
 {
     Xila.Task.Delete();
 }
+

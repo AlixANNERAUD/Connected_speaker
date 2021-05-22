@@ -13,3 +13,20 @@ function Set_Device_Password()
         device_password: Device_Passsword
     })
 }
+
+function Set_State(Button)
+{
+    if (Button == 'Shutdown_Button')
+    {
+        $.post("set", {
+            state: 'off'
+        })
+    }
+    else if (Button == 'Disconnect_Button')
+    {
+        $.post("set", {
+            state: 'disconnect'
+        })
+    }
+
+}

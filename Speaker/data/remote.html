@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
+    <meta charset="UTF-8">
 <head>
-    <title>Hi-Fi System - Remote</title>
+    <title>Smart Hi-Fi - Remote</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" href="w3.css">
     <link rel="stylesheet" type="text/css" href="style.css">
     <script type="text/javascript" src="remote.js"></script>
     <script type="text/javascript" src="jquery-3.5.1.min.js"></script>
     <script type="text/javascript" src="common.js"></script>
+    <script type="text/javascript" src="remote.js"></script>
 
 </head>
 
@@ -30,25 +31,13 @@
             <img src="/wifi.svg" height="20px" />
             WiFi
         </a>
-        <a class="w3-bar-item w3-button w3-hover-pale-green" href="bluetooth">
-            <img src="/bluetooth-b.svg" height="20px" />
-            Bluetooth
-        </a>
         <a class="w3-bar-item w3-button w3-aqua" href="remote">
             <img src="/link.svg" height="20px" />
             Remote
         </a>
-        <a class="w3-bar-item w3-button w3-hover-blue" href="led">
-            <img src="/lightbulb.svg" height="20px" />
-            LED
-        </a>
         <a class="w3-bar-item w3-button w3-hover-grey" href="device">
             <img src="/microchip.svg" height="20px" />
             Device
-        </a>
-        <a class="w3-bar-item w3-button w3-hover-orange" href="update">
-            <img src="/sync-alt.svg" height="20px" />
-            Update
         </a>
     </div>
 
@@ -65,47 +54,56 @@
 
         <!--Header-->
         <header class="w3-container w3-black w3-theme w3-padding w3-center">
-            <h1 id="Device_Name" class="w3-jumbo w3-padding-16" id="Header_Title">Hi-Fi System</h1>
+            <h1 id="Device_Name" class="w3-jumbo w3-padding-16" id="Header_Title">Smart Hi-Fi</h1>
         </header>
     </div>
 
     <div class="w3-main" style="margin-left:310px; margin-right: 10px;">
         <div class="w3-card w3-container w3-padding-large w3-section w3-black">
             <h2 class="w3-xxlarge w3-center">
-                Power Button :
+                Selected remote :
+            </h2>
+
+            <div class="w3-large w3-center w3-theme w3-padding">
+                <input class=" w3-center w3-radio" type="radio" name="remote" value="1" checked>
+                <label>Remote 1</label>
+                <input class="w3-radio" type="radio" name="remote" value="2">
+                <label>Remote 2</label>
+                <input class="w3-radio" type="radio" name="remote" value="3">
+                <label>Remote 3</label>
+                <input class="w3-radio" type="radio" name="remote" value="4">
+                <label>Remote 4</label>
+                <input class="w3-radio" type="radio" name="remote" value="5">
+                <label>Remote 5</label>
+            </div>
+
+            <h2 class="w3-xxlarge w3-center">
+                Power button :
             </h2>
             <div class="w3-center w3-theme w3-padding">
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('power-1')">Set Remote 1</button>
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('power-2')">Set Remote 2</button>
+                <button id="power" class="w3-button w3-white w3-border w3-round-large w3-large"
+                    onclick="Set_Remote_Button(this.id)">Set</button>
             </div>
             <h2 class="w3-xxlarge w3-center">
-                Volume Up :
+                Volume up :
             </h2>
             <div class="w3-center w3-theme w3-padding">
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('volume-up-1')">Set Remote 1</button>
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('volume-up-2')">Set Remote 2</button>
+                <button id="volume-up" class="w3-button w3-white w3-border w3-round-large w3-large"
+                    onclick="Set_Remote_Button(this.id)">Set</button>
             </div>
             <h2 class="w3-xxlarge w3-center">
-                Volume Down :
+                Volume down :
             </h2>
             <div class="w3-center w3-theme w3-padding">
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('volume-down-1')">Set Remote 1</button>
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('volume-down-2')">Set Remote 2</button>
+                <button id="volume-down" class="w3-button w3-white w3-border w3-round-large w3-large"
+                    onclick="Set_Remote_Button(this.id)">Set</button>
             </div>
             <h2 class="w3-xxlarge w3-center">
-                State :
+                Mute :
             </h2>
             <div class="w3-center w3-theme w3-padding">
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('state-1')">Set Remote 1</button>
-                <button id="login_button" class="w3-button w3-white w3-border w3-round-large w3-large"
-                    onclick="Set_Remote_Button('state-2')">Set Remote 2</button>
+                <button id="mute" class="w3-button w3-white w3-border w3-round-large w3-large"
+                    onclick="Set_Remote_Button(this.id)">Set</button>
             </div>
         </div>
         <footer class="w3-container w3-large w3-padding-small w3-bottom w3-center w3-black w3-border-top">

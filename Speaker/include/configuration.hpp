@@ -2,47 +2,46 @@
 #define CONFIGURATION_HPP_INCLUDED
 
 // Pinout
-#define POTENTIOMETER_PIN 33
 
-#define GREEN_LED_PIN 32
-#define RED_LED_PIN 21
-#define BLUE_LED_PIN 14
+#define Default_Device_Name "SmartHiFi"
+#define Default_Device_Password ""
 
-#define UP_PIN 16
-#define DOWN_PIN 17
+#define Potentiometer_Pin 33
 
-#define INFRARED_RECEIVER_PIN 15
+#define Green_LED_Pin 32
+#define Red_LED_Pin 21
+#define Blue_LED_Pin 14
 
-#define POWER_PIN 13
+#define Up_Pin 16
+#define Down_Pin 17
+
+#define Infrared_Receiver_Pin GPIO_NUM_15
+
+#define Power_Pin 13
+
+#define Web_Server_Port 80
+
+#define Loggin_Timeout 300000
+
+#define Maximum_Logged_Clients 5
 
 // Volume
 
-#define VOLUME_STEP 16
-//
+#define Volume_Step 16
 
-#define IR_THRESHOLD 255
-
-//Color State
-
-#define POWER_OFF_COLOR 0x000000 // Black
-#define POWER_ON_START_COLOR 0xFF8000 // Orange
-#define POWER_ON_WIFI_STATION_COLOR 0x0000FF // Blue
-#define POWER_ON_WIFI_ACCESS_POINT_COLOR 0x00FF00 // Green
-#define POWER_ON_WIFI_DISABLED_COLOR 0xFF00FF //Yellow
-#define POWER_ON_ERROR_COLOR 0xFF0000 //red
-
-#define LED_FREQUENCY 60
-
-#define WIFI_TIMEOUT 10000
-#define WAKEUP_TIMEOUT 2000
-
-#define LED_FADE_DELAY 1
-
-#define LED_FILE "/led"
-#define REMOTE_FILE "/remote"
-#define WIFI_FILE "/wifi"
-#define DEVICE_FILE "/device"
+#define Maximum_Remotes 5
 
 
+#define LED_Frequency 60
+
+#define WiFi_Timeout 10000
+#define Wakeup_Timeout 3000
+
+#define LED_Fade_Delay 4
+
+#define Led_Registry_Path "/led"
+#define Remote_Registry_Path "/remote"
+#define WiFi_Registry_Path "/wifi"
+#define Device_Registry_Path "/device"
 
 #endif
